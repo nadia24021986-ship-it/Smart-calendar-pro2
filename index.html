@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Catering Smart Calendar</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body class="login-body">
+  <div class="login-card">
+    <h1>Catering Smart Calendar</h1>
+    <p class="subtitle">Silakan masuk untuk mengelola data katering</p>
+
+    <form id="loginForm">
+      <label for="username">Nama Pengguna</label>
+      <input type="text" id="username" required autocomplete="username" />
+
+      <label for="password">Kata Sandi (Opsional)</label>
+      <input type="password" id="password" autocomplete="current-password" />
+
+      <button type="submit">Masuk Aplikasi</button>
+      <p id="errorMsg" class="error"></p>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const errorMsg = document.getElementById('errorMsg');
+
+    if (localStorage.getItem('csc_token')) {
+      window.location.href = '/dashboard.html';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorMsg.textContent = '';
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          errorMsg.textContent = data.error || 'Gagal masuk';
+          return;
+        }
+        localStorage.setItem('csc_token', data.token);
+        localStorage.setItem('csc_user', data.user.username);
+        window.location.href = '/dashboard.html';
+      } catch (err) {
+        errorMsg.textContent = 'Tidak dapat terhubung ke server';
+      }
+    });
+  </script>
+</body>
+</html>
