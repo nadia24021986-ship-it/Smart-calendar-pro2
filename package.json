@@ -1,0 +1,12 @@
+{
+  "name": "catering-smart-calendar",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Catering Smart Calendar - input & rekap data Daily Record Food & Drink",
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4"
+  }
+}
