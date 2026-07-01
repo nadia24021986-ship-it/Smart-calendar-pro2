@@ -16,19 +16,21 @@ async function api(path, options = {}) {
     ...options,
     headers: { 'Content-Type': 'application/json', ...authHeaders(), ...(options.headers || {}) },
   });
-  if (res.status === 401) { localStorage.removeItem('csc_token'); window.location.href = '/index.html'; throw new Error('Sesi berakhir'); }
+  if (res.status === 401) {
+    localStorage.removeItem('csc_token');
+    window.location.href = '/index.html';
+    throw new Error('Sesi berakhir');
+  }
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Terjadi kesalahan');
   return data;
 }
 
-// ---------- STATE ----------
 let currentYear = new Date().getFullYear();
 let currentMonth = new Date().getMonth() + 1;
 let selectedDate = null;
 let allEntries = [];
 
-// ---------- KALENDER ----------
 const DAYS = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
 const MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
@@ -65,7 +67,7 @@ function renderCalendar(entries) {
   }
 
   const remaining = 42 - firstDay - daysInMonth;
-  for (let d = 1; d <= remaining; d++) {
+  for (let d = 1; d <= Math.max(0, remaining); d++) {
     html += `<div class="cal-day other-month"><span class="cal-num">${d}</span></div>`;
   }
 
@@ -74,36 +76,33 @@ function renderCalendar(entries) {
 
 document.getElementById('prevMonth').addEventListener('click', () => {
   currentMonth--; if (currentMonth < 1) { currentMonth = 12; currentYear--; }
+  selectedDate = null;
   loadMonth();
 });
 document.getElementById('nextMonth').addEventListener('click', () => {
   currentMonth++; if (currentMonth > 12) { currentMonth = 1; currentYear++; }
+  selectedDate = null;
   loadMonth();
 });
 document.getElementById('showAllBtn').addEventListener('click', () => {
   selectedDate = null;
+  renderCalendar(allEntries);
   renderTable(allEntries);
-  document.querySelectorAll('.cal-day.selected').forEach(el => el.classList.remove('selected'));
 });
 
 window.selectDate = function(iso) {
   selectedDate = iso;
   renderCalendar(allEntries);
-  const filtered = allEntries.filter(e => e.date === iso);
-  renderTable(filtered);
-  document.getElementById('f_date') && (document.getElementById('f_date').value = iso);
+  renderTable(allEntries.filter(e => e.date === iso));
 };
 
 async function loadMonth() {
+  renderCalendar([]);
   try {
     const { entries } = await api(`/api/entries?month=${currentMonth}&year=${currentYear}`);
     allEntries = entries;
     renderCalendar(entries);
-    if (selectedDate) {
-      renderTable(entries.filter(e => e.date === selectedDate));
-    } else {
-      renderTable(entries);
-    }
+    renderTable(selectedDate ? entries.filter(e => e.date === selectedDate) : entries);
     updateSummary(entries);
     populateFilter(entries);
   } catch(err) {
@@ -113,7 +112,7 @@ async function loadMonth() {
 
 function updateSummary(entries) {
   document.getElementById('totalTamu').textContent = entries.length;
-  const total = entries.reduce((s, e) => s + (e.pagi||0) + (e.siang||0) + (e.malam||0), 0);
+  const total = entries.reduce((s,e) => s + (e.pagi||0) + (e.siang||0) + (e.malam||0), 0);
   document.getElementById('totalMakanan').textContent = total;
 }
 
@@ -125,7 +124,6 @@ function populateFilter(entries) {
   if (current) sel.value = current;
 }
 
-// ---------- SEARCH & FILTER ----------
 document.getElementById('searchInput').addEventListener('input', applyFilter);
 document.getElementById('filterPeace').addEventListener('change', applyFilter);
 
@@ -142,7 +140,6 @@ function applyFilter() {
   renderTable(data);
 }
 
-// ---------- TABEL ----------
 function esc(s) {
   if (!s && s !== 0) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -160,23 +157,19 @@ function formatDate(iso) {
 
 function renderTable(entries) {
   const wrap = document.getElementById('tableWrap');
-  document.getElementById('badgeTotal').textContent = `Total Saringan (Pagi+Siang+Malam): ${entries.reduce((s,e)=>s+(e.pagi||0)+(e.siang||0)+(e.malam||0),0)}`;
+  const totalPorsi = entries.reduce((s,e) => s+(e.pagi||0)+(e.siang||0)+(e.malam||0), 0);
+  document.getElementById('badgeTotal').textContent = `Total Saringan (Pagi+Siang+Malam): ${totalPorsi}`;
 
   if (!entries.length) {
-    wrap.innerHTML = `<div class="empty-state">${selectedDate ? 'Tidak ada data untuk tanggal ini.' : 'Belum ada data bulan ini.'}</div>`;
+    wrap.innerHTML = `<div class="empty-state">${selectedDate ? 'Tidak ada data untuk tanggal ini.' : 'Belum ada data bulan ini. Klik "+ Tambah Manual" untuk mulai.'}</div>`;
     return;
   }
 
   wrap.innerHTML = `<table class="record-table">
     <thead><tr>
-      <th>Tamu</th>
-      <th>Tanggal</th>
-      <th>Pagi (B)</th>
-      <th>Siang (L)</th>
-      <th>Malam (D)</th>
-      <th>Mess / Lokasi</th>
-      <th>Petugas</th>
-      <th>Aksi</th>
+      <th>Tamu</th><th>Tanggal</th>
+      <th>Pagi (B)</th><th>Siang (L)</th><th>Malam (D)</th>
+      <th>Mess / Lokasi</th><th>Petugas</th><th>Aksi</th>
     </tr></thead>
     <tbody>
       ${entries.map(e => `<tr>
@@ -196,7 +189,6 @@ function renderTable(entries) {
   </table>`;
 }
 
-// ---------- EXPORT ----------
 document.getElementById('exportBtn').addEventListener('click', () => {
   document.getElementById('exportMenu').classList.toggle('open');
 });
@@ -208,7 +200,6 @@ window.exportData = function(range) {
   document.getElementById('exportMenu').classList.remove('open');
   const today = new Date();
   let data = allEntries;
-
   if (range === 'today') {
     const iso = today.toISOString().slice(0,10);
     data = allEntries.filter(e => e.date === iso);
@@ -217,19 +208,16 @@ window.exportData = function(range) {
     const end = new Date(start); end.setDate(start.getDate() + 6);
     data = allEntries.filter(e => e.date >= start.toISOString().slice(0,10) && e.date <= end.toISOString().slice(0,10));
   }
-
   const header = ['No','Nama Tamu','Requestor','Tanggal','Pagi','Siang','Malam','Mess/Lokasi','Petugas'];
   const rows = data.map((e,i) => [i+1, e.namaTamu, e.requestor, e.date, e.pagi, e.siang, e.malam, e.peace, e.petugas]);
   const csv = [header, ...rows].map(r => r.map(c => `"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
-
-  const blob = new Blob([csv], { type: 'text/csv' });
+  const blob = new Blob([csv], { type:'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a'); a.href = url;
   a.download = `catering-${range}-${today.toISOString().slice(0,10)}.csv`;
   a.click(); URL.revokeObjectURL(url);
 };
 
-// ---------- MODAL ----------
 const modalOverlay = document.getElementById('modalOverlay');
 const itemsList = document.getElementById('itemsList');
 const attachmentsList = document.getElementById('attachmentsList');
@@ -250,14 +238,13 @@ function emptyItemRow(v = {}) {
 }
 
 document.getElementById('addItemBtn').addEventListener('click', () => itemsList.appendChild(emptyItemRow()));
-document.getElementById('addBtn').addEventListener('click', () => openModal());
 document.getElementById('cancelBtn').addEventListener('click', closeModal);
 
-function openModal(entry = null) {
+window.openModal = function(entry = null) {
   editingId = entry ? entry.id : null;
   document.getElementById('modalTitle').textContent = entry ? 'Edit Data' : 'Tambah Data';
   document.getElementById('f_no').value = entry?.no || '';
-  document.getElementById('f_date').value = entry?.date || (selectedDate || new Date().toISOString().slice(0,10));
+  document.getElementById('f_date').value = entry?.date || selectedDate || new Date().toISOString().slice(0,10);
   document.getElementById('f_namaTamu').value = entry?.namaTamu || '';
   document.getElementById('f_requestor').value = entry?.requestor || '';
   document.getElementById('f_peace').value = entry?.peace || '';
@@ -265,15 +252,13 @@ function openModal(entry = null) {
   document.getElementById('f_pagi').value = entry?.pagi || 0;
   document.getElementById('f_siang').value = entry?.siang || 0;
   document.getElementById('f_malam').value = entry?.malam || 0;
-
   itemsList.innerHTML = '';
   const items = entry?.items?.length ? entry.items : [{}];
   items.forEach(it => itemsList.appendChild(emptyItemRow(it)));
-
   currentAttachments = entry?.attachments ? [...entry.attachments] : [];
   renderAttachments();
   modalOverlay.style.display = 'flex';
-}
+};
 
 function closeModal() {
   modalOverlay.style.display = 'none';
@@ -340,18 +325,20 @@ document.getElementById('entryForm').addEventListener('submit', async e => {
   } catch(err) { alert('Gagal menyimpan: ' + err.message); }
 });
 
-window.openEdit = async (id) => {
+window.openEdit = function(id) {
   const entry = allEntries.find(e => e.id === id);
   if (entry) openModal(entry);
 };
 
-window.deleteEntry = async (id) => {
+window.deleteEntry = async function(id) {
   if (!confirm('Hapus data ini?')) return;
   try {
     await api(`/api/entries/${id}`, { method:'DELETE' });
-    loadMonth();
+    allEntries = allEntries.filter(e => e.id !== id);
+    renderCalendar(allEntries);
+    renderTable(selectedDate ? allEntries.filter(e => e.date === selectedDate) : allEntries);
+    updateSummary(allEntries);
   } catch(err) { alert('Gagal menghapus: ' + err.message); }
 };
 
-// ---------- INIT ----------
 loadMonth();
