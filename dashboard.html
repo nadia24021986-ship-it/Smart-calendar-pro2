@@ -16,7 +16,6 @@
   </div>
 
   <div class="content">
-    <!-- KALENDER -->
     <div class="card">
       <div class="card-header">
         <span>📅 Kalender</span>
@@ -32,7 +31,6 @@
       </div>
     </div>
 
-    <!-- RINGKASAN -->
     <div class="card summary-card">
       <div class="summary-title">💰 Ringkasan Bulan Ini</div>
       <div class="summary-row">
@@ -47,7 +45,6 @@
       </div>
     </div>
 
-    <!-- TOOLBAR -->
     <div class="toolbar2">
       <input type="text" id="searchInput" placeholder="🔍 Cari tamu, mess, atau petugas..." />
       <select id="filterPeace">
@@ -61,10 +58,9 @@
           <button onclick="exportData('month')">Bulan Ini</button>
         </div>
       </div>
-      <button class="btn btn-primary" id="addBtn">+ Tambah Manual</button>
+      <button class="btn btn-primary" onclick="openModal()">+ Tambah Manual</button>
     </div>
 
-    <!-- TABEL -->
     <div class="card" style="overflow-x:auto;">
       <div class="table-title">
         Jadwal Makan Katering
@@ -74,7 +70,6 @@
     </div>
   </div>
 
-  <!-- MODAL TAMBAH/EDIT -->
   <div class="modal-overlay" id="modalOverlay" style="display:none;">
     <div class="modal">
       <h2 id="modalTitle">Tambah Data</h2>
@@ -97,4 +92,22 @@
           <div class="item-header-row">
             <span>Jam</span><span>Item</span><span>Qty</span><span>Remarks</span><span></span>
           </div>
-          <div id
+          <div id="itemsList"></div>
+          <button type="button" class="add-item-btn" id="addItemBtn">+ Tambah Item</button>
+        </div>
+        <div class="upload-row">
+          <label>📎 Lampiran (gambar/PDF):</label>
+          <input type="file" id="fileInput" accept="image/*,.pdf"/>
+        </div>
+        <div id="attachmentsList" style="margin-top:8px;"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="cancelBtn">Batal</button>
+          <button type="submit" class="btn btn-primary">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
