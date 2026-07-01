@@ -70,17 +70,28 @@
     </div>
   </div>
 
+  <!-- MODAL -->
   <div class="modal-overlay" id="modalOverlay" style="display:none;">
     <div class="modal">
       <h2 id="modalTitle">Tambah Data</h2>
       <form id="entryForm">
         <div class="form-grid">
-          <div><label>No</label><input type="number" id="f_no" min="1"/></div>
-          <div><label>Tanggal</label><input type="date" id="f_date" required/></div>
-          <div class="full-width"><label>Nama Tamu</label><input type="text" id="f_namaTamu" required/></div>
-          <div><label>Requestor</label><input type="text" id="f_requestor"/></div>
-          <div><label>Mess / Lokasi</label><input type="text" id="f_peace"/></div>
-          <div><label>Petugas</label><input type="text" id="f_petugas"/></div>
+          <div class="full-width">
+            <label>Tanggal</label>
+            <input type="date" id="f_date" required/>
+          </div>
+          <div class="full-width">
+            <label>Nama Tamu</label>
+            <input type="text" id="f_namaTamu" required/>
+          </div>
+          <div>
+            <label>Requestor</label>
+            <input type="text" id="f_requestor"/>
+          </div>
+          <div>
+            <label>Mess / Lokasi</label>
+            <input type="text" id="f_peace"/>
+          </div>
         </div>
         <div class="porsi-row">
           <div><label>Pagi (B)</label><input type="number" id="f_pagi" min="0" value="0"/></div>
@@ -95,11 +106,6 @@
           <div id="itemsList"></div>
           <button type="button" class="add-item-btn" id="addItemBtn">+ Tambah Item</button>
         </div>
-        <div class="upload-row">
-          <label>📎 Lampiran (gambar/PDF):</label>
-          <input type="file" id="fileInput" accept="image/*,.pdf"/>
-        </div>
-        <div id="attachmentsList" style="margin-top:8px;"></div>
         <div class="modal-actions">
           <button type="button" class="btn btn-secondary" id="cancelBtn">Batal</button>
           <button type="submit" class="btn btn-primary">Simpan</button>
