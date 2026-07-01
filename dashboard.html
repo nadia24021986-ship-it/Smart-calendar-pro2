@@ -53,9 +53,14 @@
       <div class="export-wrap">
         <button class="btn btn-primary" id="exportBtn">📥 Ekspor</button>
         <div class="export-menu" id="exportMenu">
-          <button onclick="exportData('today')">Hari Ini</button>
-          <button onclick="exportData('week')">Seminggu Ini</button>
-          <button onclick="exportData('month')">Bulan Ini</button>
+          <div class="export-group-label">CSV</div>
+          <button onclick="exportData('today','csv')">Hari Ini</button>
+          <button onclick="exportData('week','csv')">Seminggu Ini</button>
+          <button onclick="exportData('month','csv')">Bulan Ini</button>
+          <div class="export-group-label">JPG</div>
+          <button onclick="exportData('today','jpg')">Hari Ini</button>
+          <button onclick="exportData('week','jpg')">Seminggu Ini</button>
+          <button onclick="exportData('month','jpg')">Bulan Ini</button>
         </div>
       </div>
       <button class="btn btn-primary" onclick="openModal()">+ Tambah Manual</button>
@@ -118,6 +123,7 @@
     </div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="/app.js"></script>
 </body>
-</html>
+                                                                                            </html>
