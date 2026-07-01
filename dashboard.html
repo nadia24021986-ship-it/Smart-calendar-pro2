@@ -3,12 +3,15 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Catering Smart Calendar</title>
+<title>Smart Calendar Pro 2.0</title>
 <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
   <div class="topbar">
-    <h1>📋 Catering Smart Calendar</h1>
+    <div class="topbar-brand">
+      <div class="brand-title">Smart Calendar Pro 2.0</div>
+      <div class="brand-sub">hendrosapp.com</div>
+    </div>
     <div class="user-info">
       <span id="userLabel"></span>
       <button class="logout" id="logoutBtn">Keluar</button>
@@ -26,32 +29,32 @@
         </div>
       </div>
       <div id="calGrid" class="cal-grid"></div>
-      <div style="text-align:center;margin-top:8px;">
-        <button class="btn btn-secondary" id="showAllBtn">🔄 Tampilkan Semua Data</button>
+      <div style="text-align:center;margin-top:10px;">
+        <button class="btn btn-ghost" id="showAllBtn">🔄 Tampilkan Semua Data</button>
       </div>
     </div>
 
     <div class="card summary-card">
-      <div class="summary-title">💰 Ringkasan Bulan Ini</div>
+      <div class="summary-title">📊 Ringkasan Bulan Ini</div>
       <div class="summary-row">
         <div class="summary-box">
           <div class="summary-label">TOTAL TAMU</div>
           <div class="summary-val" id="totalTamu">0</div>
         </div>
-        <div class="summary-box green">
+        <div class="summary-box accent">
           <div class="summary-label">TOTAL MAKANAN</div>
-          <div class="summary-val green" id="totalMakanan">0</div>
+          <div class="summary-val accent" id="totalMakanan">0</div>
         </div>
       </div>
     </div>
 
     <div class="toolbar2">
-      <input type="text" id="searchInput" placeholder="🔍 Cari tamu, mess, atau petugas..." />
+      <input type="text" id="searchInput" placeholder="🔍 Cari tamu, mess..." />
       <select id="filterPeace">
         <option value="">Semua Mess</option>
       </select>
       <div class="export-wrap">
-        <button class="btn btn-primary" id="exportBtn">📥 Ekspor</button>
+        <button class="btn btn-gold" id="exportBtn">📥 Ekspor</button>
         <div class="export-menu" id="exportMenu">
           <div class="export-group-label">CSV</div>
           <button onclick="exportData('today','csv')">Hari Ini</button>
@@ -101,12 +104,18 @@
             <label>Mess / Lokasi</label>
             <input type="text" id="f_peace"/>
           </div>
+          <div class="full-width">
+            <label>Keterangan</label>
+            <input type="text" id="f_keterangan" placeholder="Catatan tambahan..."/>
+          </div>
         </div>
+
         <div class="porsi-row">
           <div><label>Pagi (B)</label><input type="number" id="f_pagi" min="0" value="0"/></div>
           <div><label>Siang (L)</label><input type="number" id="f_siang" min="0" value="0"/></div>
           <div><label>Malam (D)</label><input type="number" id="f_malam" min="0" value="0"/></div>
         </div>
+
         <div class="items-section">
           <h3>Item Pesanan</h3>
           <div class="item-header-row">
@@ -115,8 +124,18 @@
           <div id="itemsList"></div>
           <button type="button" class="add-item-btn" id="addItemBtn">+ Tambah Item</button>
         </div>
+
+        <div class="items-section" style="margin-top:14px;">
+          <h3>🍱 Makanan Tambahan</h3>
+          <div class="item-header-row" style="grid-template-columns:90px 1fr 28px;">
+            <span>Waktu Kirim</span><span>Nama Makanan</span><span></span>
+          </div>
+          <div id="tambahanList"></div>
+          <button type="button" class="add-item-btn" id="addTambahanBtn">+ Tambah Makanan</button>
+        </div>
+
         <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" id="cancelBtn">Batal</button>
+          <button type="button" class="btn btn-ghost" id="cancelBtn">Batal</button>
           <button type="submit" class="btn btn-primary">Simpan</button>
         </div>
       </form>
@@ -126,4 +145,4 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="/app.js"></script>
 </body>
-                                                                                            </html>
+</html>
