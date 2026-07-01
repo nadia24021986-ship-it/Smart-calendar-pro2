@@ -233,6 +233,7 @@ window.openModal = function(entry = null) {
   editingId = entry ? entry.id : null;
   document.getElementById('modalTitle').textContent = entry ? 'Edit Data' : 'Tambah Data';
   document.getElementById('f_date').value = entry?.date || selectedDate || new Date().toISOString().slice(0,10);
+  document.getElementById('f_date_end').value = '';
   document.getElementById('f_namaTamu').value = entry?.namaTamu || '';
   document.getElementById('f_requestor').value = entry?.requestor || '';
   document.getElementById('f_peace').value = entry?.peace || '';
@@ -260,8 +261,9 @@ document.getElementById('entryForm').addEventListener('submit', async e => {
     remarks: row.querySelector('.it-remarks').value,
   })).filter(it => it.time || it.item || it.qty || it.remarks);
 
-  const payload = {
-    date: document.getElementById('f_date').value,
+  const dateStart = document.getElementById('f_date').value;
+  const dateEnd = document.getElementById('f_date_end').value;
+  const base = {
     namaTamu: document.getElementById('f_namaTamu').value,
     requestor: document.getElementById('f_requestor').value,
     peace: document.getElementById('f_peace').value,
@@ -272,11 +274,23 @@ document.getElementById('entryForm').addEventListener('submit', async e => {
     items,
   };
 
+  // Kumpulkan semua tanggal dalam rentang
+  const dates = [];
+  const cur = new Date(dateStart + 'T00:00:00');
+  const end = dateEnd ? new Date(dateEnd + 'T00:00:00') : new Date(dateStart + 'T00:00:00');
+  if (end < cur) { alert('Tanggal akhir tidak boleh sebelum tanggal awal'); return; }
+  while (cur <= end) {
+    dates.push(cur.toISOString().slice(0,10));
+    cur.setDate(cur.getDate() + 1);
+  }
+
   try {
     if (editingId) {
-      await api(`/api/entries/${editingId}`, { method:'PUT', body:JSON.stringify(payload) });
+      await api(`/api/entries/${editingId}`, { method:'PUT', body:JSON.stringify({...base, date: dateStart}) });
     } else {
-      await api('/api/entries', { method:'POST', body:JSON.stringify(payload) });
+      for (const date of dates) {
+        await api('/api/entries', { method:'POST', body:JSON.stringify({...base, date}) });
+      }
     }
     closeModal();
     loadMonth();
