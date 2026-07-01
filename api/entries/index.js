@@ -9,6 +9,10 @@ function mapEntry(row) {
     namaTamu: row.nama_tamu,
     requestor: row.requestor,
     peace: row.peace,
+    pagi: row.pagi || 0,
+    siang: row.siang || 0,
+    malam: row.malam || 0,
+    petugas: row.petugas || '',
     items: row.items || [],
     attachments: row.attachments || [],
     createdBy: row.created_by,
@@ -19,15 +23,21 @@ function mapEntry(row) {
 
 module.exports = async (req, res) => {
   const user = getUserFromRequest(req);
-  if (!user) return res.status(401).json({ error: 'Belum login / sesi tidak valid' });
+  if (!user) return res.status(401).json({ error: 'Belum login' });
 
   const supabase = getSupabase();
 
   try {
     if (req.method === 'GET') {
-      const { date } = req.query;
+      const { date, month, year } = req.query;
       let query = supabase.from('entries').select('*').order('no', { ascending: true });
       if (date) query = query.eq('date', date);
+      if (month && year) {
+        const from = `${year}-${String(month).padStart(2,'0')}-01`;
+        const last = new Date(year, month, 0).getDate();
+        const to = `${year}-${String(month).padStart(2,'0')}-${last}`;
+        query = query.gte('date', from).lte('date', to);
+      }
       const { data, error } = await query;
       if (error) throw error;
       return res.status(200).json({ entries: data.map(mapEntry) });
@@ -38,40 +48,31 @@ module.exports = async (req, res) => {
       if (!body.date || !body.namaTamu) {
         return res.status(400).json({ error: 'Tanggal dan Nama Tamu wajib diisi' });
       }
-
       let no = body.no;
       if (!no) {
-        const { data: sameDate, error: cntErr } = await supabase
-          .from('entries')
-          .select('no')
-          .eq('date', body.date);
-        if (cntErr) throw cntErr;
-        const maxNo = sameDate.reduce((m, r) => Math.max(m, r.no || 0), 0);
-        no = maxNo + 1;
+        const { data: same } = await supabase.from('entries').select('no').eq('date', body.date);
+        no = same ? Math.max(0, ...same.map(r => r.no || 0)) + 1 : 1;
       }
-
-      const { data, error } = await supabase
-        .from('entries')
-        .insert({
-          date: body.date,
-          no,
-          nama_tamu: body.namaTamu,
-          requestor: body.requestor || '',
-          peace: body.peace || '',
-          items: body.items || [],
-          attachments: body.attachments || [],
-          created_by: user.username,
-        })
-        .select()
-        .single();
+      const { data, error } = await supabase.from('entries').insert({
+        date: body.date, no,
+        nama_tamu: body.namaTamu,
+        requestor: body.requestor || '',
+        peace: body.peace || '',
+        pagi: body.pagi || 0,
+        siang: body.siang || 0,
+        malam: body.malam || 0,
+        petugas: body.petugas || user.username,
+        items: body.items || [],
+        attachments: body.attachments || [],
+        created_by: user.username,
+      }).select().single();
       if (error) throw error;
       return res.status(201).json({ entry: mapEntry(data) });
     }
 
-    res.setHeader('Allow', 'GET, POST');
     return res.status(405).json({ error: 'Method tidak diizinkan' });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: err.message || 'Terjadi kesalahan server' });
+    return res.status(500).json({ error: err.message });
   }
 };
