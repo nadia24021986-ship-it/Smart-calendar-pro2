@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Catering Smart Calendar - Dashboard</title>
+<title>Catering Smart Calendar</title>
 <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
@@ -15,70 +15,86 @@
     </div>
   </div>
 
-  <div class="toolbar">
-    <input type="date" id="datePicker" />
-    <button class="btn btn-secondary" id="todayBtn">Hari Ini</button>
-    <button class="btn btn-primary" id="addBtn">+ Tambah Data</button>
-  </div>
-
   <div class="content">
-    <div class="record-header">
-      <div class="title">DAILY RECORD FOOD &amp; DRINK</div>
-      <div class="date" id="dateLabel"></div>
+    <!-- KALENDER -->
+    <div class="card">
+      <div class="card-header">
+        <span>📅 Kalender</span>
+        <div class="cal-nav">
+          <button id="prevMonth">‹</button>
+          <span id="monthLabel"></span>
+          <button id="nextMonth">›</button>
+        </div>
+      </div>
+      <div id="calGrid" class="cal-grid"></div>
+      <div style="text-align:center;margin-top:8px;">
+        <button class="btn btn-secondary" id="showAllBtn">🔄 Tampilkan Semua Data</button>
+      </div>
     </div>
-    <div id="tableWrap"></div>
+
+    <!-- RINGKASAN -->
+    <div class="card summary-card">
+      <div class="summary-title">💰 Ringkasan Bulan Ini</div>
+      <div class="summary-row">
+        <div class="summary-box">
+          <div class="summary-label">TOTAL TAMU</div>
+          <div class="summary-val" id="totalTamu">0</div>
+        </div>
+        <div class="summary-box green">
+          <div class="summary-label">TOTAL MAKANAN</div>
+          <div class="summary-val green" id="totalMakanan">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div class="toolbar2">
+      <input type="text" id="searchInput" placeholder="🔍 Cari tamu, mess, atau petugas..." />
+      <select id="filterPeace">
+        <option value="">Semua Mess</option>
+      </select>
+      <div class="export-wrap">
+        <button class="btn btn-primary" id="exportBtn">📥 Ekspor</button>
+        <div class="export-menu" id="exportMenu">
+          <button onclick="exportData('today')">Hari Ini</button>
+          <button onclick="exportData('week')">Seminggu Ini</button>
+          <button onclick="exportData('month')">Bulan Ini</button>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="addBtn">+ Tambah Manual</button>
+    </div>
+
+    <!-- TABEL -->
+    <div class="card" style="overflow-x:auto;">
+      <div class="table-title">
+        Jadwal Makan Katering
+        <span class="badge-total" id="badgeTotal">Total: 0</span>
+      </div>
+      <div id="tableWrap"></div>
+    </div>
   </div>
 
+  <!-- MODAL TAMBAH/EDIT -->
   <div class="modal-overlay" id="modalOverlay" style="display:none;">
     <div class="modal">
       <h2 id="modalTitle">Tambah Data</h2>
       <form id="entryForm">
         <div class="form-grid">
-          <div>
-            <label>No</label>
-            <input type="number" id="f_no" min="1" />
-          </div>
-          <div>
-            <label>Tanggal</label>
-            <input type="date" id="f_date" required />
-          </div>
-          <div class="full-width">
-            <label>Nama Tamu</label>
-            <input type="text" id="f_namaTamu" required />
-          </div>
-          <div>
-            <label>Requestor</label>
-            <input type="text" id="f_requestor" />
-          </div>
-          <div>
-            <label>Pleace (Tempat)</label>
-            <input type="text" id="f_peace" />
-          </div>
+          <div><label>No</label><input type="number" id="f_no" min="1"/></div>
+          <div><label>Tanggal</label><input type="date" id="f_date" required/></div>
+          <div class="full-width"><label>Nama Tamu</label><input type="text" id="f_namaTamu" required/></div>
+          <div><label>Requestor</label><input type="text" id="f_requestor"/></div>
+          <div><label>Mess / Lokasi</label><input type="text" id="f_peace"/></div>
+          <div><label>Petugas</label><input type="text" id="f_petugas"/></div>
         </div>
-
+        <div class="porsi-row">
+          <div><label>Pagi (B)</label><input type="number" id="f_pagi" min="0" value="0"/></div>
+          <div><label>Siang (L)</label><input type="number" id="f_siang" min="0" value="0"/></div>
+          <div><label>Malam (D)</label><input type="number" id="f_malam" min="0" value="0"/></div>
+        </div>
         <div class="items-section">
           <h3>Item Pesanan</h3>
-          <div id="itemsList"></div>
-          <button type="button" class="add-item-btn" id="addItemBtn">+ Tambah Item</button>
-        </div>
-
-        <div class="upload-row">
-          <label style="font-size:12.5px;font-weight:600;color:var(--muted);">Lampirkan referensi (gambar/PDF):</label>
-          <input type="file" id="fileInput" accept="image/*,.pdf" />
-        </div>
-        <div id="attachmentsList" style="margin-top:8px;"></div>
-        <div class="note-box">
-          Catatan: lampiran disimpan sebagai berkas referensi pada data ini. Ekstraksi data otomatis dari gambar/PDF belum aktif — isi field di atas secara manual untuk saat ini.
-        </div>
-
-        <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" id="cancelBtn">Batal</button>
-          <button type="submit" class="btn btn-primary" id="saveBtn">Simpan</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <script src="/app.js"></script>
-</body>
-</html>
+          <div class="item-header-row">
+            <span>Jam</span><span>Item</span><span>Qty</span><span>Remarks</span><span></span>
+          </div>
+          <div id
