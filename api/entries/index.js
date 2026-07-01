@@ -3,30 +3,20 @@ const { getUserFromRequest } = require('../../lib/auth');
 
 function mapEntry(row) {
   return {
-    id: row.id,
-    date: row.date,
-    no: row.no,
-    namaTamu: row.nama_tamu,
-    requestor: row.requestor,
-    peace: row.peace,
-    pagi: row.pagi || 0,
-    siang: row.siang || 0,
-    malam: row.malam || 0,
-    petugas: row.petugas || '',
-    items: row.items || [],
-    attachments: row.attachments || [],
-    createdBy: row.created_by,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    id: row.id, date: row.date, no: row.no,
+    namaTamu: row.nama_tamu, requestor: row.requestor, peace: row.peace,
+    keterangan: row.keterangan || '',
+    pagi: row.pagi || 0, siang: row.siang || 0, malam: row.malam || 0,
+    makananTambahan: row.makanan_tambahan || [],
+    items: row.items || [], attachments: row.attachments || [],
+    createdBy: row.created_by, createdAt: row.created_at, updatedAt: row.updated_at,
   };
 }
 
 module.exports = async (req, res) => {
   const user = getUserFromRequest(req);
   if (!user) return res.status(401).json({ error: 'Belum login' });
-
   const supabase = getSupabase();
-
   try {
     if (req.method === 'GET') {
       const { date, month, year } = req.query;
@@ -45,9 +35,7 @@ module.exports = async (req, res) => {
 
     if (req.method === 'POST') {
       const body = req.body || {};
-      if (!body.date || !body.namaTamu) {
-        return res.status(400).json({ error: 'Tanggal dan Nama Tamu wajib diisi' });
-      }
+      if (!body.date || !body.namaTamu) return res.status(400).json({ error: 'Tanggal dan Nama Tamu wajib' });
       let no = body.no;
       if (!no) {
         const { data: same } = await supabase.from('entries').select('no').eq('date', body.date);
@@ -58,10 +46,9 @@ module.exports = async (req, res) => {
         nama_tamu: body.namaTamu,
         requestor: body.requestor || '',
         peace: body.peace || '',
-        pagi: body.pagi || 0,
-        siang: body.siang || 0,
-        malam: body.malam || 0,
-        petugas: body.petugas || user.username,
+        keterangan: body.keterangan || '',
+        pagi: body.pagi || 0, siang: body.siang || 0, malam: body.malam || 0,
+        makanan_tambahan: body.makananTambahan || [],
         items: body.items || [],
         attachments: body.attachments || [],
         created_by: user.username,
@@ -69,7 +56,6 @@ module.exports = async (req, res) => {
       if (error) throw error;
       return res.status(201).json({ entry: mapEntry(data) });
     }
-
     return res.status(405).json({ error: 'Method tidak diizinkan' });
   } catch (err) {
     console.error(err);
