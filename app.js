@@ -34,6 +34,19 @@ let allEntries = [];
 const DAYS = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
 const MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
+function showToast(msg) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.className = 'toast show';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.className = 'toast'; }, 2500);
+}
+
 function renderCalendar(entries) {
   const grid = document.getElementById('calGrid');
   document.getElementById('monthLabel').textContent = `${MONTHS[currentMonth-1]} ${currentYear}`;
@@ -274,7 +287,6 @@ document.getElementById('entryForm').addEventListener('submit', async e => {
     items,
   };
 
-  // Kumpulkan semua tanggal dalam rentang
   const dates = [];
   const cur = new Date(dateStart + 'T00:00:00');
   const end = dateEnd ? new Date(dateEnd + 'T00:00:00') : new Date(dateStart + 'T00:00:00');
@@ -287,10 +299,15 @@ document.getElementById('entryForm').addEventListener('submit', async e => {
   try {
     if (editingId) {
       await api(`/api/entries/${editingId}`, { method:'PUT', body:JSON.stringify({...base, date: dateStart}) });
+      showToast('✓ Data berhasil diperbarui');
     } else {
       for (const date of dates) {
         await api('/api/entries', { method:'POST', body:JSON.stringify({...base, date}) });
       }
+      const info = dates.length > 1
+        ? `✓ ${dates.length} data untuk ${dates.length} hari berhasil disimpan`
+        : '✓ Data berhasil disimpan';
+      showToast(info);
     }
     closeModal();
     loadMonth();
@@ -310,6 +327,7 @@ window.deleteEntry = async function(id) {
     renderCalendar(allEntries);
     renderTable(selectedDate ? allEntries.filter(e => e.date === selectedDate) : allEntries);
     updateSummary(allEntries);
+    showToast('✓ Data berhasil dihapus');
   } catch(err) { alert('Gagal menghapus: ' + err.message); }
 };
 
