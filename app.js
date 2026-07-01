@@ -26,6 +26,13 @@ async function api(path, options = {}) {
   return data;
 }
 
+// Fix tanggal: pakai local time bukan UTC
+function localISO(date) {
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+}
+
+function todayISO() { return localISO(new Date()); }
+
 let currentYear = new Date().getFullYear();
 let currentMonth = new Date().getMonth() + 1;
 let selectedDate = null;
@@ -48,7 +55,7 @@ function renderCalendar(entries) {
   document.getElementById('monthLabel').textContent = `${MONTHS[currentMonth-1]} ${currentYear}`;
   const countByDate = {};
   entries.forEach(e => { countByDate[e.date] = (countByDate[e.date] || 0) + 1; });
-  const today = new Date().toISOString().slice(0,10);
+  const today = todayISO();
   const firstDay = new Date(currentYear, currentMonth-1, 1).getDay();
   const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
   const prevDays = new Date(currentYear, currentMonth-1, 0).getDate();
@@ -127,7 +134,7 @@ function applyFilter() {
   if (q) data = data.filter(e =>
     (e.namaTamu||'').toLowerCase().includes(q) ||
     (e.peace||'').toLowerCase().includes(q) ||
-    (e.petugas||'').toLowerCase().includes(q)
+    (e.keterangan||'').toLowerCase().includes(q)
   );
   if (peace) data = data.filter(e => e.peace === peace);
   renderTable(data);
@@ -158,27 +165,35 @@ function renderTable(entries) {
     <thead><tr>
       <th>No</th><th>Tamu</th><th>Tanggal</th>
       <th>Pagi (B)</th><th>Siang (L)</th><th>Malam (D)</th>
-      <th>Mess / Lokasi</th><th>Petugas</th><th>Aksi</th>
+      <th>Makanan Tambahan</th><th>Mess / Lokasi</th>
+      <th>Keterangan</th><th>Aksi</th>
     </tr></thead>
     <tbody>
-      ${entries.map((e,i) => `<tr>
-        <td style="text-align:center;font-weight:700;">${e.no||i+1}</td>
-        <td><strong>${esc(e.namaTamu)}</strong>${e.requestor?`<br><small style="color:var(--muted)">${esc(e.requestor)}</small>`:''}</td>
-        <td style="white-space:nowrap;font-size:12px;">${formatDate(e.date)}</td>
-        <td style="text-align:center">${porsi(e.pagi)}</td>
-        <td style="text-align:center">${porsi(e.siang)}</td>
-        <td style="text-align:center">${porsi(e.malam)}</td>
-        <td>${esc(e.peace)}</td>
-        <td>${esc(e.petugas)}</td>
-        <td class="actions-cell">
-          <button onclick="openEdit('${e.id}')" title="Edit">✏️</button>
-          <button onclick="deleteEntry('${e.id}')" title="Hapus">🗑️</button>
-        </td>
-      </tr>`).join('')}
+      ${entries.map((e,i) => {
+        const tambahan = (e.makananTambahan||[]).map(t =>
+          `<span class="tambahan-chip">⏰${esc(t.waktu)||'?'} ${esc(t.nama)}</span>`
+        ).join('');
+        return `<tr>
+          <td style="text-align:center;font-weight:800;color:var(--primary);">${e.no||i+1}</td>
+          <td><strong>${esc(e.namaTamu)}</strong>${e.requestor?`<br><small style="color:var(--muted)">${esc(e.requestor)}</small>`:''}</td>
+          <td style="white-space:nowrap;font-size:12px;">${formatDate(e.date)}</td>
+          <td style="text-align:center">${porsi(e.pagi)}</td>
+          <td style="text-align:center">${porsi(e.siang)}</td>
+          <td style="text-align:center">${porsi(e.malam)}</td>
+          <td>${tambahan || '<span style="color:#ccc;font-size:12px;">-</span>'}</td>
+          <td>${esc(e.peace)}</td>
+          <td style="font-size:12px;color:var(--muted);">${esc(e.keterangan)}</td>
+          <td class="actions-cell">
+            <button onclick="openEdit('${e.id}')" title="Edit">✏️</button>
+            <button onclick="deleteEntry('${e.id}')" title="Hapus">🗑️</button>
+          </td>
+        </tr>`;
+      }).join('')}
     </tbody>
   </table>`;
 }
 
+// EXPORT
 document.getElementById('exportBtn').addEventListener('click', () => {
   document.getElementById('exportMenu').classList.toggle('open');
 });
@@ -191,72 +206,80 @@ window.exportData = function(range, format = 'csv') {
   const today = new Date();
   let data = allEntries;
   if (range === 'today') {
-    data = allEntries.filter(e => e.date === today.toISOString().slice(0,10));
+    data = allEntries.filter(e => e.date === todayISO());
   } else if (range === 'week') {
     const start = new Date(today); start.setDate(today.getDate() - today.getDay());
     const end = new Date(start); end.setDate(start.getDate() + 6);
-    data = allEntries.filter(e => e.date >= start.toISOString().slice(0,10) && e.date <= end.toISOString().slice(0,10));
+    data = allEntries.filter(e => e.date >= localISO(start) && e.date <= localISO(end));
   }
   if (format === 'jpg') { exportJPG(data, range, today); return; }
-  const header = ['No','Nama Tamu','Requestor','Tanggal','Pagi','Siang','Malam','Mess/Lokasi','Petugas'];
-  const rows = data.map((e,i) => [e.no||i+1, e.namaTamu, e.requestor, e.date, e.pagi, e.siang, e.malam, e.peace, e.petugas]);
+  const header = ['No','Nama Tamu','Requestor','Tanggal','Pagi','Siang','Malam','Makanan Tambahan','Mess/Lokasi','Keterangan'];
+  const rows = data.map((e,i) => [
+    e.no||i+1, e.namaTamu, e.requestor, e.date,
+    e.pagi, e.siang, e.malam,
+    (e.makananTambahan||[]).map(t=>`${t.waktu} ${t.nama}`).join('; '),
+    e.peace, e.keterangan
+  ]);
   const csv = [header,...rows].map(r => r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob([csv],{type:'text/csv'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a'); a.href=url;
-  a.download=`catering-${range}-${today.toISOString().slice(0,10)}.csv`;
+  a.download=`catering-${range}-${todayISO()}.csv`;
   a.click(); URL.revokeObjectURL(url);
 };
 
 async function exportJPG(data, range, today) {
   if (!data.length) { showToast('Tidak ada data untuk diekspor'); return; }
   const rangeLabel = range === 'today' ? 'Hari Ini' : range === 'week' ? 'Seminggu Ini' : 'Bulan Ini';
-  const tgl = today.toLocaleDateString('id-ID', { weekday:'long', year:'numeric', month:'long', day:'numeric' }).toUpperCase();
+  const tgl = today.toLocaleDateString('id-ID',{weekday:'long',year:'numeric',month:'long',day:'numeric'}).toUpperCase();
   const wrap = document.createElement('div');
-  wrap.style.cssText = 'position:fixed;top:-9999px;left:-9999px;background:white;padding:24px;width:900px;font-family:Arial,sans-serif;';
+  wrap.style.cssText = 'position:fixed;top:-9999px;left:-9999px;background:white;padding:28px;width:960px;font-family:Arial,sans-serif;';
   wrap.innerHTML = `
-    <div style="text-align:center;margin-bottom:16px;">
-      <div style="font-size:18px;font-weight:800;letter-spacing:1px;">DAILY RECORD FOOD & DRINK</div>
-      <div style="font-size:14px;font-weight:600;margin-top:4px;">${tgl} — Ekspor: ${rangeLabel}</div>
+    <div style="text-align:center;margin-bottom:18px;border-bottom:3px solid #1e2d5a;padding-bottom:14px;">
+      <div style="font-size:20px;font-weight:900;color:#1e2d5a;letter-spacing:1px;">DAILY RECORD FOOD & DRINK</div>
+      <div style="font-size:13px;font-weight:700;margin-top:5px;color:#6b7396;">${tgl} — ${rangeLabel}</div>
+      <div style="font-size:11px;color:#c9a84c;font-weight:700;margin-top:2px;">Smart Calendar Pro 2.0 | hendrosapp.com</div>
     </div>
-    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
       <thead>
-        <tr style="background:#1ba94c;color:white;">
-          <th style="padding:8px;text-align:left;border:1px solid #138a3c;">No</th>
-          <th style="padding:8px;text-align:left;border:1px solid #138a3c;">Nama Tamu</th>
-          <th style="padding:8px;text-align:left;border:1px solid #138a3c;">Requestor</th>
-          <th style="padding:8px;text-align:left;border:1px solid #138a3c;">Tanggal</th>
-          <th style="padding:8px;text-align:center;border:1px solid #138a3c;">Pagi</th>
-          <th style="padding:8px;text-align:center;border:1px solid #138a3c;">Siang</th>
-          <th style="padding:8px;text-align:center;border:1px solid #138a3c;">Malam</th>
-          <th style="padding:8px;text-align:left;border:1px solid #138a3c;">Mess/Lokasi</th>
-          <th style="padding:8px;text-align:left;border:1px solid #138a3c;">Petugas</th>
+        <tr style="background:#1e2d5a;color:white;">
+          <th style="padding:9px 8px;text-align:left;border:1px solid #2d4080;">No</th>
+          <th style="padding:9px 8px;text-align:left;border:1px solid #2d4080;">Nama Tamu</th>
+          <th style="padding:9px 8px;text-align:left;border:1px solid #2d4080;">Requestor</th>
+          <th style="padding:9px 8px;text-align:left;border:1px solid #2d4080;">Tanggal</th>
+          <th style="padding:9px 8px;text-align:center;border:1px solid #2d4080;">Pagi</th>
+          <th style="padding:9px 8px;text-align:center;border:1px solid #2d4080;">Siang</th>
+          <th style="padding:9px 8px;text-align:center;border:1px solid #2d4080;">Malam</th>
+          <th style="padding:9px 8px;text-align:left;border:1px solid #2d4080;">Mak. Tambahan</th>
+          <th style="padding:9px 8px;text-align:left;border:1px solid #2d4080;">Mess/Lokasi</th>
+          <th style="padding:9px 8px;text-align:left;border:1px solid #2d4080;">Keterangan</th>
         </tr>
       </thead>
       <tbody>
-        ${data.map((e,i) => `<tr style="background:${i%2===0?'#f9fdfb':'white'}">
-          <td style="padding:7px 8px;border:1px solid #e1e5e3;text-align:center;font-weight:700;">${e.no||i+1}</td>
-          <td style="padding:7px 8px;border:1px solid #e1e5e3;font-weight:600;">${e.namaTamu||''}</td>
-          <td style="padding:7px 8px;border:1px solid #e1e5e3;">${e.requestor||''}</td>
-          <td style="padding:7px 8px;border:1px solid #e1e5e3;white-space:nowrap;">${formatDate(e.date)}</td>
-          <td style="padding:7px 8px;border:1px solid #e1e5e3;text-align:center;">${e.pagi||'-'}</td>
-          <td style="padding:7px 8px;border:1px solid #e1e5e3;text-align:center;">${e.siang||'-'}</td>
-          <td style="padding:7px 8px;border:1px solid #e1e5e3;text-align:center;">${e.malam||'-'}</td>
-          <td style="padding:7px 8px;border:1px solid #e1e5e3;">${e.peace||''}</td>
-          <td style="padding:7px 8px;border:1px solid #e1e5e3;">${e.petugas||''}</td>
+        ${data.map((e,i) => `<tr style="background:${i%2===0?'#f5f7fd':'white'}">
+          <td style="padding:7px 8px;border:1px solid #dde3f0;text-align:center;font-weight:800;color:#1e2d5a;">${e.no||i+1}</td>
+          <td style="padding:7px 8px;border:1px solid #dde3f0;font-weight:700;">${e.namaTamu||''}</td>
+          <td style="padding:7px 8px;border:1px solid #dde3f0;">${e.requestor||''}</td>
+          <td style="padding:7px 8px;border:1px solid #dde3f0;white-space:nowrap;">${formatDate(e.date)}</td>
+          <td style="padding:7px 8px;border:1px solid #dde3f0;text-align:center;font-weight:700;">${e.pagi||'-'}</td>
+          <td style="padding:7px 8px;border:1px solid #dde3f0;text-align:center;font-weight:700;">${e.siang||'-'}</td>
+          <td style="padding:7px 8px;border:1px solid #dde3f0;text-align:center;font-weight:700;">${e.malam||'-'}</td>
+          <td style="padding:7px 8px;border:1px solid #dde3f0;font-size:11px;">${(e.makananTambahan||[]).map(t=>`${t.waktu} ${t.nama}`).join(', ')||'-'}</td>
+          <td style="padding:7px 8px;border:1px solid #dde3f0;">${e.peace||''}</td>
+          <td style="padding:7px 8px;border:1px solid #dde3f0;font-size:11px;">${e.keterangan||''}</td>
         </tr>`).join('')}
       </tbody>
       <tfoot>
-        <tr style="background:#e8f5ee;font-weight:700;">
-          <td colspan="4" style="padding:8px;border:1px solid #e1e5e3;">TOTAL</td>
-          <td style="padding:8px;border:1px solid #e1e5e3;text-align:center;">${data.reduce((s,e)=>s+(e.pagi||0),0)}</td>
-          <td style="padding:8px;border:1px solid #e1e5e3;text-align:center;">${data.reduce((s,e)=>s+(e.siang||0),0)}</td>
-          <td style="padding:8px;border:1px solid #e1e5e3;text-align:center;">${data.reduce((s,e)=>s+(e.malam||0),0)}</td>
-          <td colspan="2" style="padding:8px;border:1px solid #e1e5e3;"></td>
+        <tr style="background:#e8f0fe;font-weight:800;">
+          <td colspan="4" style="padding:9px 8px;border:1px solid #dde3f0;color:#1e2d5a;">TOTAL</td>
+          <td style="padding:9px 8px;border:1px solid #dde3f0;text-align:center;color:#1e2d5a;">${data.reduce((s,e)=>s+(e.pagi||0),0)}</td>
+          <td style="padding:9px 8px;border:1px solid #dde3f0;text-align:center;color:#1e2d5a;">${data.reduce((s,e)=>s+(e.siang||0),0)}</td>
+          <td style="padding:9px 8px;border:1px solid #dde3f0;text-align:center;color:#1e2d5a;">${data.reduce((s,e)=>s+(e.malam||0),0)}</td>
+          <td colspan="3" style="padding:9px 8px;border:1px solid #dde3f0;"></td>
         </tr>
       </tfoot>
     </table>
-    <div style="text-align:right;font-size:11px;color:#888;margin-top:10px;">Dicetak: ${new Date().toLocaleString('id-ID')}</div>
+    <div style="text-align:right;font-size:10px;color:#aaa;margin-top:10px;">Dicetak: ${new Date().toLocaleString('id-ID')}</div>
   `;
   document.body.appendChild(wrap);
   try {
@@ -264,7 +287,7 @@ async function exportJPG(data, range, today) {
     const canvas = await html2canvas(wrap, { scale:2, backgroundColor:'#ffffff', useCORS:true });
     const a = document.createElement('a');
     a.href = canvas.toDataURL('image/jpeg', 0.95);
-    a.download = `catering-${range}-${today.toISOString().slice(0,10)}.jpg`;
+    a.download = `catering-${range}-${todayISO()}.jpg`;
     a.click();
     showToast('✓ Gambar berhasil diunduh');
   } catch(err) {
@@ -274,8 +297,10 @@ async function exportJPG(data, range, today) {
   }
 }
 
+// MODAL
 const modalOverlay = document.getElementById('modalOverlay');
 const itemsList = document.getElementById('itemsList');
+const tambahanList = document.getElementById('tambahanList');
 let editingId = null;
 
 function emptyItemRow(v = {}) {
@@ -291,23 +316,39 @@ function emptyItemRow(v = {}) {
   return row;
 }
 
+function emptyTambahanRow(v = {}) {
+  const row = document.createElement('div');
+  row.className = 'tambahan-row';
+  row.innerHTML = `
+    <input type="text" class="tb-waktu" placeholder="Jam kirim" value="${esc(v.waktu||'')}"/>
+    <input type="text" class="tb-nama" placeholder="Nama makanan" value="${esc(v.nama||'')}"/>
+    <button type="button">✕</button>`;
+  row.querySelector('button').onclick = () => row.remove();
+  return row;
+}
+
 document.getElementById('addItemBtn').addEventListener('click', () => itemsList.appendChild(emptyItemRow()));
+document.getElementById('addTambahanBtn').addEventListener('click', () => tambahanList.appendChild(emptyTambahanRow()));
 document.getElementById('cancelBtn').addEventListener('click', closeModal);
 
 window.openModal = function(entry = null) {
   editingId = entry ? entry.id : null;
   document.getElementById('modalTitle').textContent = entry ? 'Edit Data' : 'Tambah Data';
-  document.getElementById('f_date').value = entry?.date || selectedDate || new Date().toISOString().slice(0,10);
+  document.getElementById('f_date').value = entry?.date || selectedDate || todayISO();
   document.getElementById('f_date_end').value = '';
   document.getElementById('f_namaTamu').value = entry?.namaTamu || '';
   document.getElementById('f_requestor').value = entry?.requestor || '';
   document.getElementById('f_peace').value = entry?.peace || '';
+  document.getElementById('f_keterangan').value = entry?.keterangan || '';
   document.getElementById('f_pagi').value = entry?.pagi || 0;
   document.getElementById('f_siang').value = entry?.siang || 0;
   document.getElementById('f_malam').value = entry?.malam || 0;
   itemsList.innerHTML = '';
   const items = entry?.items?.length ? entry.items : [{}];
   items.forEach(it => itemsList.appendChild(emptyItemRow(it)));
+  tambahanList.innerHTML = '';
+  const tambahan = entry?.makananTambahan?.length ? entry.makananTambahan : [];
+  if (tambahan.length) tambahan.forEach(t => tambahanList.appendChild(emptyTambahanRow(t)));
   modalOverlay.style.display = 'flex';
 };
 
@@ -326,25 +367,35 @@ document.getElementById('entryForm').addEventListener('submit', async e => {
     remarks: row.querySelector('.it-remarks').value,
   })).filter(it => it.time || it.item || it.qty || it.remarks);
 
+  const makananTambahan = [...tambahanList.querySelectorAll('.tambahan-row')].map(row => ({
+    waktu: row.querySelector('.tb-waktu').value,
+    nama: row.querySelector('.tb-nama').value,
+  })).filter(t => t.waktu || t.nama);
+
   const dateStart = document.getElementById('f_date').value;
-  const dateEnd = document.getElementById('f_date_end').value;
+  const dateEndVal = document.getElementById('f_date_end').value;
+
   const base = {
     namaTamu: document.getElementById('f_namaTamu').value,
     requestor: document.getElementById('f_requestor').value,
     peace: document.getElementById('f_peace').value,
+    keterangan: document.getElementById('f_keterangan').value,
     petugas: username || '',
     pagi: +document.getElementById('f_pagi').value || 0,
     siang: +document.getElementById('f_siang').value || 0,
     malam: +document.getElementById('f_malam').value || 0,
     items,
+    makananTambahan,
   };
 
+  // Kumpulkan tanggal dengan local time (fix bug tanggal akhir)
   const dates = [];
-  const cur = new Date(dateStart + 'T00:00:00');
-  const end = dateEnd ? new Date(dateEnd + 'T00:00:00') : new Date(dateStart + 'T00:00:00');
-  if (end < cur) { alert('Tanggal akhir tidak boleh sebelum tanggal awal'); return; }
-  while (cur <= end) {
-    dates.push(cur.toISOString().slice(0,10));
+  const startD = new Date(dateStart + 'T00:00:00');
+  const endD = dateEndVal ? new Date(dateEndVal + 'T00:00:00') : new Date(dateStart + 'T00:00:00');
+  if (endD < startD) { alert('Tanggal akhir tidak boleh sebelum tanggal awal'); return; }
+  const cur = new Date(startD);
+  while (cur <= endD) {
+    dates.push(localISO(cur));
     cur.setDate(cur.getDate() + 1);
   }
 
