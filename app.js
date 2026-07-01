@@ -36,8 +36,7 @@ const MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustu
 
 function renderCalendar(entries) {
   const grid = document.getElementById('calGrid');
-  const label = document.getElementById('monthLabel');
-  label.textContent = `${MONTHS[currentMonth-1]} ${currentYear}`;
+  document.getElementById('monthLabel').textContent = `${MONTHS[currentMonth-1]} ${currentYear}`;
 
   const countByDate = {};
   entries.forEach(e => { countByDate[e.date] = (countByDate[e.date] || 0) + 1; });
@@ -50,16 +49,13 @@ function renderCalendar(entries) {
   let html = DAYS.map(d => `<div class="cal-day-header">${d}</div>`).join('');
 
   for (let i = 0; i < firstDay; i++) {
-    const d = prevDays - firstDay + i + 1;
-    html += `<div class="cal-day other-month"><span class="cal-num">${d}</span></div>`;
+    html += `<div class="cal-day other-month"><span class="cal-num">${prevDays - firstDay + i + 1}</span></div>`;
   }
 
   for (let d = 1; d <= daysInMonth; d++) {
     const iso = `${currentYear}-${String(currentMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const count = countByDate[iso] || 0;
-    const isToday = iso === today;
-    const isSel = iso === selectedDate;
-    const cls = ['cal-day', count ? 'has-data' : '', isToday ? 'today' : '', isSel ? 'selected' : ''].filter(Boolean).join(' ');
+    const cls = ['cal-day', count ? 'has-data' : '', iso === today ? 'today' : '', iso === selectedDate ? 'selected' : ''].filter(Boolean).join(' ');
     html += `<div class="${cls}" onclick="selectDate('${iso}')">
       <span class="cal-num">${d}</span>
       ${count ? `<span class="cal-count">${count}</span>` : ''}
@@ -76,13 +72,11 @@ function renderCalendar(entries) {
 
 document.getElementById('prevMonth').addEventListener('click', () => {
   currentMonth--; if (currentMonth < 1) { currentMonth = 12; currentYear--; }
-  selectedDate = null;
-  loadMonth();
+  selectedDate = null; loadMonth();
 });
 document.getElementById('nextMonth').addEventListener('click', () => {
   currentMonth++; if (currentMonth > 12) { currentMonth = 1; currentYear++; }
-  selectedDate = null;
-  loadMonth();
+  selectedDate = null; loadMonth();
 });
 document.getElementById('showAllBtn').addEventListener('click', () => {
   selectedDate = null;
@@ -112,16 +106,15 @@ async function loadMonth() {
 
 function updateSummary(entries) {
   document.getElementById('totalTamu').textContent = entries.length;
-  const total = entries.reduce((s,e) => s + (e.pagi||0) + (e.siang||0) + (e.malam||0), 0);
-  document.getElementById('totalMakanan').textContent = total;
+  document.getElementById('totalMakanan').textContent = entries.reduce((s,e) => s+(e.pagi||0)+(e.siang||0)+(e.malam||0), 0);
 }
 
 function populateFilter(entries) {
   const sel = document.getElementById('filterPeace');
-  const current = sel.value;
+  const cur = sel.value;
   const places = [...new Set(entries.map(e => e.peace).filter(Boolean))].sort();
   sel.innerHTML = '<option value="">Semua Mess</option>' + places.map(p => `<option value="${p}">${p}</option>`).join('');
-  if (current) sel.value = current;
+  if (cur) sel.value = cur;
 }
 
 document.getElementById('searchInput').addEventListener('input', applyFilter);
@@ -144,35 +137,34 @@ function esc(s) {
   if (!s && s !== 0) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
-
 function porsi(n) {
   return n ? `<span class="porsi-badge">${n}</span>` : `<span class="porsi-badge empty">-</span>`;
 }
-
 function formatDate(iso) {
   if (!iso) return '';
   const d = new Date(iso + 'T00:00:00');
-  return `${['Min','Sen','Sel','Rab','Kam','Jum','Sab'][d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()].slice(0,3)} ${d.getFullYear()}`;
+  return `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()].slice(0,3)} ${d.getFullYear()}`;
 }
 
 function renderTable(entries) {
   const wrap = document.getElementById('tableWrap');
-  const totalPorsi = entries.reduce((s,e) => s+(e.pagi||0)+(e.siang||0)+(e.malam||0), 0);
-  document.getElementById('badgeTotal').textContent = `Total Saringan (Pagi+Siang+Malam): ${totalPorsi}`;
+  document.getElementById('badgeTotal').textContent =
+    `Total Saringan (Pagi+Siang+Malam): ${entries.reduce((s,e)=>s+(e.pagi||0)+(e.siang||0)+(e.malam||0),0)}`;
 
   if (!entries.length) {
-    wrap.innerHTML = `<div class="empty-state">${selectedDate ? 'Tidak ada data untuk tanggal ini.' : 'Belum ada data bulan ini. Klik "+ Tambah Manual" untuk mulai.'}</div>`;
+    wrap.innerHTML = `<div class="empty-state">${selectedDate ? 'Tidak ada data untuk tanggal ini.' : 'Belum ada data bulan ini.'}</div>`;
     return;
   }
 
   wrap.innerHTML = `<table class="record-table">
     <thead><tr>
-      <th>Tamu</th><th>Tanggal</th>
+      <th>No</th><th>Tamu</th><th>Tanggal</th>
       <th>Pagi (B)</th><th>Siang (L)</th><th>Malam (D)</th>
       <th>Mess / Lokasi</th><th>Petugas</th><th>Aksi</th>
     </tr></thead>
     <tbody>
-      ${entries.map(e => `<tr>
+      ${entries.map((e,i) => `<tr>
+        <td style="text-align:center;font-weight:700;">${e.no || i+1}</td>
         <td><strong>${esc(e.namaTamu)}</strong>${e.requestor ? `<br><small style="color:var(--muted)">${esc(e.requestor)}</small>` : ''}</td>
         <td style="white-space:nowrap;font-size:12px;">${formatDate(e.date)}</td>
         <td style="text-align:center">${porsi(e.pagi)}</td>
@@ -201,28 +193,25 @@ window.exportData = function(range) {
   const today = new Date();
   let data = allEntries;
   if (range === 'today') {
-    const iso = today.toISOString().slice(0,10);
-    data = allEntries.filter(e => e.date === iso);
+    data = allEntries.filter(e => e.date === today.toISOString().slice(0,10));
   } else if (range === 'week') {
     const start = new Date(today); start.setDate(today.getDate() - today.getDay());
     const end = new Date(start); end.setDate(start.getDate() + 6);
     data = allEntries.filter(e => e.date >= start.toISOString().slice(0,10) && e.date <= end.toISOString().slice(0,10));
   }
   const header = ['No','Nama Tamu','Requestor','Tanggal','Pagi','Siang','Malam','Mess/Lokasi','Petugas'];
-  const rows = data.map((e,i) => [i+1, e.namaTamu, e.requestor, e.date, e.pagi, e.siang, e.malam, e.peace, e.petugas]);
-  const csv = [header, ...rows].map(r => r.map(c => `"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
-  const blob = new Blob([csv], { type:'text/csv' });
+  const rows = data.map((e,i) => [e.no||i+1, e.namaTamu, e.requestor, e.date, e.pagi, e.siang, e.malam, e.peace, e.petugas]);
+  const csv = [header,...rows].map(r => r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url;
-  a.download = `catering-${range}-${today.toISOString().slice(0,10)}.csv`;
+  const a = document.createElement('a'); a.href=url;
+  a.download=`catering-${range}-${today.toISOString().slice(0,10)}.csv`;
   a.click(); URL.revokeObjectURL(url);
 };
 
 const modalOverlay = document.getElementById('modalOverlay');
 const itemsList = document.getElementById('itemsList');
-const attachmentsList = document.getElementById('attachmentsList');
 let editingId = null;
-let currentAttachments = [];
 
 function emptyItemRow(v = {}) {
   const row = document.createElement('div');
@@ -243,20 +232,16 @@ document.getElementById('cancelBtn').addEventListener('click', closeModal);
 window.openModal = function(entry = null) {
   editingId = entry ? entry.id : null;
   document.getElementById('modalTitle').textContent = entry ? 'Edit Data' : 'Tambah Data';
-  document.getElementById('f_no').value = entry?.no || '';
   document.getElementById('f_date').value = entry?.date || selectedDate || new Date().toISOString().slice(0,10);
   document.getElementById('f_namaTamu').value = entry?.namaTamu || '';
   document.getElementById('f_requestor').value = entry?.requestor || '';
   document.getElementById('f_peace').value = entry?.peace || '';
-  document.getElementById('f_petugas').value = entry?.petugas || username || '';
   document.getElementById('f_pagi').value = entry?.pagi || 0;
   document.getElementById('f_siang').value = entry?.siang || 0;
   document.getElementById('f_malam').value = entry?.malam || 0;
   itemsList.innerHTML = '';
   const items = entry?.items?.length ? entry.items : [{}];
   items.forEach(it => itemsList.appendChild(emptyItemRow(it)));
-  currentAttachments = entry?.attachments ? [...entry.attachments] : [];
-  renderAttachments();
   modalOverlay.style.display = 'flex';
 };
 
@@ -265,32 +250,6 @@ function closeModal() {
   editingId = null;
   document.getElementById('entryForm').reset();
 }
-
-function renderAttachments() {
-  attachmentsList.innerHTML = currentAttachments.map((a,i) =>
-    `<span class="attachment-chip">
-      <a href="${a.url}" target="_blank">${esc(a.filename)}</a>
-      <button type="button" data-idx="${i}">✕</button>
-    </span>`
-  ).join('');
-  attachmentsList.querySelectorAll('button').forEach(btn =>
-    btn.addEventListener('click', () => { currentAttachments.splice(+btn.dataset.idx,1); renderAttachments(); })
-  );
-}
-
-document.getElementById('fileInput').addEventListener('change', async e => {
-  const file = e.target.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = async () => {
-    try {
-      const data = await api('/api/upload', { method:'POST', body:JSON.stringify({ filename:file.name, dataBase64:reader.result.split(',')[1] }) });
-      currentAttachments.push({ url:data.url, filename:data.filename });
-      renderAttachments();
-    } catch(err) { alert('Gagal upload: ' + err.message); }
-    e.target.value = '';
-  };
-  reader.readAsDataURL(file);
-});
 
 document.getElementById('entryForm').addEventListener('submit', async e => {
   e.preventDefault();
@@ -302,16 +261,15 @@ document.getElementById('entryForm').addEventListener('submit', async e => {
   })).filter(it => it.time || it.item || it.qty || it.remarks);
 
   const payload = {
-    no: document.getElementById('f_no').value ? +document.getElementById('f_no').value : undefined,
     date: document.getElementById('f_date').value,
     namaTamu: document.getElementById('f_namaTamu').value,
     requestor: document.getElementById('f_requestor').value,
     peace: document.getElementById('f_peace').value,
-    petugas: document.getElementById('f_petugas').value,
+    petugas: username || '',
     pagi: +document.getElementById('f_pagi').value || 0,
     siang: +document.getElementById('f_siang').value || 0,
     malam: +document.getElementById('f_malam').value || 0,
-    items, attachments: currentAttachments,
+    items,
   };
 
   try {
