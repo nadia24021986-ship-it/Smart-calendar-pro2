@@ -9,8 +9,8 @@
 <body>
   <div class="topbar">
     <div class="topbar-brand">
-      <img src="/logo.png" alt="hendrosapp.com" class="topbar-logo" />
       <div class="brand-title">Smart Calendar Pro 2.0</div>
+      <img src="/logo.png" alt="hendrosapp.com" class="topbar-logo" />
     </div>
     <div class="user-info">
       <span id="userLabel"></span>
@@ -50,9 +50,7 @@
 
     <div class="toolbar2">
       <input type="text" id="searchInput" placeholder="🔍 Cari tamu, mess, keterangan..." />
-      <select id="filterPeace">
-        <option value="">Semua Mess</option>
-      </select>
+      <select id="filterPeace"><option value="">Semua Mess</option></select>
       <div class="export-wrap">
         <button class="btn btn-gold" id="exportBtn">📥 Ekspor</button>
         <div class="export-menu" id="exportMenu">
@@ -96,34 +94,18 @@
             <label>Nama Tamu</label>
             <input type="text" id="f_namaTamu" required placeholder="Nama tamu / grup"/>
           </div>
-          <div>
+          <div class="full-width">
             <label>Requester</label>
             <input type="text" id="f_requestor" placeholder="Nama requester"/>
           </div>
-          <div>
-            <label>Mess / Lokasi</label>
-            <input type="text" id="f_peace" placeholder="Mess atau lokasi"/>
-          </div>
-          <div>
-            <label>Jumlah</label>
-            <input type="number" id="f_jumlah" min="0" value="0"/>
-          </div>
-          <div class="full-width">
-            <label>Keterangan</label>
-            <input type="text" id="f_keterangan" placeholder="Catatan tambahan..."/>
-          </div>
         </div>
 
-        <div class="items-section" style="margin-top:14px;">
-          <h3>⏰ Waktu Makan</h3>
-          <div id="waktuList"></div>
-          <button type="button" class="add-item-btn" id="addWaktuBtn">+ Tambah Waktu</button>
-        </div>
-
-        <div class="items-section" style="margin-top:14px;">
-          <h3>🍱 Ekstra</h3>
-          <div id="ekstraList"></div>
-          <button type="button" class="add-item-btn" id="addEkstraBtn">+ Tambah Ekstra</button>
+        <div class="sessions-section">
+          <div class="sessions-header">
+            <h3>⏰ Waktu Makan</h3>
+            <button type="button" class="btn btn-primary btn-sm" id="addSessionBtn">+ Tambah Waktu</button>
+          </div>
+          <div id="sessionsList"></div>
         </div>
 
         <div class="modal-actions">
