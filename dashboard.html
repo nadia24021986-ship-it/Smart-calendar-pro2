@@ -42,14 +42,14 @@
           <div class="summary-val" id="totalTamu">0</div>
         </div>
         <div class="summary-box accent">
-          <div class="summary-label">TOTAL MAKANAN</div>
-          <div class="summary-val accent" id="totalMakanan">0</div>
+          <div class="summary-label">TOTAL JUMLAH</div>
+          <div class="summary-val accent" id="totalJumlah">0</div>
         </div>
       </div>
     </div>
 
     <div class="toolbar2">
-      <input type="text" id="searchInput" placeholder="🔍 Cari tamu, mess..." />
+      <input type="text" id="searchInput" placeholder="🔍 Cari tamu, mess, keterangan..." />
       <select id="filterPeace">
         <option value="">Semua Mess</option>
       </select>
@@ -57,13 +57,13 @@
         <button class="btn btn-gold" id="exportBtn">📥 Ekspor</button>
         <div class="export-menu" id="exportMenu">
           <div class="export-group-label">CSV</div>
-          <button onclick="exportData('today','csv')">Hari Ini</button>
-          <button onclick="exportData('week','csv')">Seminggu Ini</button>
-          <button onclick="exportData('month','csv')">Bulan Ini</button>
+          <button onclick="exportData('date','csv')">Tanggal Dipilih</button>
+          <button onclick="exportData('week','csv')">Mingguan</button>
+          <button onclick="exportData('month','csv')">Bulanan</button>
           <div class="export-group-label">JPG</div>
-          <button onclick="exportData('today','jpg')">Hari Ini</button>
-          <button onclick="exportData('week','jpg')">Seminggu Ini</button>
-          <button onclick="exportData('month','jpg')">Bulan Ini</button>
+          <button onclick="exportData('date','jpg')">Tanggal Dipilih</button>
+          <button onclick="exportData('week','jpg')">Mingguan</button>
+          <button onclick="exportData('month','jpg')">Bulanan</button>
         </div>
       </div>
       <button class="btn btn-primary" onclick="openModal()">+ Tambah Manual</button>
@@ -72,7 +72,7 @@
     <div class="card" style="overflow-x:auto;">
       <div class="table-title">
         Jadwal Makan Katering
-        <span class="badge-total" id="badgeTotal">Total: 0</span>
+        <span class="badge-date" id="badgeDate">📅 Semua</span>
       </div>
       <div id="tableWrap"></div>
     </div>
@@ -85,24 +85,32 @@
       <form id="entryForm">
         <div class="form-grid">
           <div>
-            <label>Dari Tanggal</label>
+            <label>Tanggal Masuk</label>
             <input type="date" id="f_date" required/>
           </div>
           <div>
-            <label>Sampai Tanggal (opsional)</label>
+            <label>Tanggal Keluar (opsional)</label>
             <input type="date" id="f_date_end"/>
           </div>
           <div class="full-width">
             <label>Nama Tamu</label>
-            <input type="text" id="f_namaTamu" required/>
+            <input type="text" id="f_namaTamu" required placeholder="Nama tamu / grup"/>
           </div>
           <div>
-            <label>Requestor</label>
-            <input type="text" id="f_requestor"/>
+            <label>Requester</label>
+            <input type="text" id="f_requestor" placeholder="Nama requester"/>
           </div>
           <div>
             <label>Mess / Lokasi</label>
-            <input type="text" id="f_peace"/>
+            <input type="text" id="f_peace" placeholder="Mess atau lokasi"/>
+          </div>
+          <div>
+            <label>Waktu</label>
+            <input type="time" id="f_waktu"/>
+          </div>
+          <div>
+            <label>Jumlah</label>
+            <input type="number" id="f_jumlah" min="0" value="0"/>
           </div>
           <div class="full-width">
             <label>Keterangan</label>
@@ -110,28 +118,10 @@
           </div>
         </div>
 
-        <div class="porsi-row">
-          <div><label>Pagi (B)</label><input type="number" id="f_pagi" min="0" value="0"/></div>
-          <div><label>Siang (L)</label><input type="number" id="f_siang" min="0" value="0"/></div>
-          <div><label>Malam (D)</label><input type="number" id="f_malam" min="0" value="0"/></div>
-        </div>
-
-        <div class="items-section">
-          <h3>Item Pesanan</h3>
-          <div class="item-header-row">
-            <span>Jam</span><span>Item</span><span>Qty</span><span>Remarks</span><span></span>
-          </div>
-          <div id="itemsList"></div>
-          <button type="button" class="add-item-btn" id="addItemBtn">+ Tambah Item</button>
-        </div>
-
         <div class="items-section" style="margin-top:14px;">
-          <h3>🍱 Makanan Tambahan</h3>
-          <div class="item-header-row" style="grid-template-columns:90px 1fr 28px;">
-            <span>Waktu Kirim</span><span>Nama Makanan</span><span></span>
-          </div>
-          <div id="tambahanList"></div>
-          <button type="button" class="add-item-btn" id="addTambahanBtn">+ Tambah Makanan</button>
+          <h3>🍱 Ekstra</h3>
+          <div id="ekstraList"></div>
+          <button type="button" class="add-item-btn" id="addEkstraBtn">+ Tambah Ekstra</button>
         </div>
 
         <div class="modal-actions">
