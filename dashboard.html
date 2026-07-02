@@ -9,8 +9,8 @@
 <body>
   <div class="topbar">
     <div class="topbar-brand">
+      <img src="/logo.png" alt="hendrosapp.com" class="topbar-logo" />
       <div class="brand-title">Smart Calendar Pro 2.0</div>
-      <div class="brand-sub">hendrosapp.com</div>
     </div>
     <div class="user-info">
       <span id="userLabel"></span>
@@ -105,10 +105,6 @@
             <input type="text" id="f_peace" placeholder="Mess atau lokasi"/>
           </div>
           <div>
-            <label>Waktu</label>
-            <input type="time" id="f_waktu"/>
-          </div>
-          <div>
             <label>Jumlah</label>
             <input type="number" id="f_jumlah" min="0" value="0"/>
           </div>
@@ -116,6 +112,12 @@
             <label>Keterangan</label>
             <input type="text" id="f_keterangan" placeholder="Catatan tambahan..."/>
           </div>
+        </div>
+
+        <div class="items-section" style="margin-top:14px;">
+          <h3>⏰ Waktu Makan</h3>
+          <div id="waktuList"></div>
+          <button type="button" class="add-item-btn" id="addWaktuBtn">+ Tambah Waktu</button>
         </div>
 
         <div class="items-section" style="margin-top:14px;">
