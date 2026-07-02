@@ -4,12 +4,18 @@ const { getUserFromRequest } = require('../../lib/auth');
 function mapEntry(row) {
   return {
     id: row.id, date: row.date, no: row.no,
-    namaTamu: row.nama_tamu, requestor: row.requestor, peace: row.peace,
+    namaTamu: row.nama_tamu,
+    requestor: row.requestor || '',
+    peace: row.peace || '',
+    waktu: row.waktu || '',
+    jumlah: row.jumlah || 0,
     keterangan: row.keterangan || '',
-    pagi: row.pagi || 0, siang: row.siang || 0, malam: row.malam || 0,
-    makananTambahan: row.makanan_tambahan || [],
-    items: row.items || [], attachments: row.attachments || [],
-    createdBy: row.created_by, createdAt: row.created_at, updatedAt: row.updated_at,
+    ekstra: row.makanan_tambahan || [],
+    items: row.items || [],
+    attachments: row.attachments || [],
+    createdBy: row.created_by,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 
@@ -46,9 +52,10 @@ module.exports = async (req, res) => {
         nama_tamu: body.namaTamu,
         requestor: body.requestor || '',
         peace: body.peace || '',
+        waktu: body.waktu || '',
+        jumlah: body.jumlah || 0,
         keterangan: body.keterangan || '',
-        pagi: body.pagi || 0, siang: body.siang || 0, malam: body.malam || 0,
-        makanan_tambahan: body.makananTambahan || [],
+        makanan_tambahan: body.ekstra || [],
         items: body.items || [],
         attachments: body.attachments || [],
         created_by: user.username,
