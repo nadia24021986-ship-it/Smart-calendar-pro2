@@ -3,5 +3,11 @@
     "api/**/*.js": {
       "memory": 256
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/cleanup",
+      "schedule": "0 0 1 * *"
+    }
+  ]
 }
