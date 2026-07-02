@@ -111,14 +111,21 @@ async function loadMonth() {
 
 function updateSummary(entries) {
   document.getElementById('totalTamu').textContent = entries.length;
-  document.getElementById('totalJumlah').textContent = entries.reduce((s,e) => s+(e.jumlah||0), 0);
+  const total = entries.reduce((s,e) => {
+    const sess = e.sessions && e.sessions.length ? e.sessions : [];
+    return s + sess.reduce((a,b) => a + (b.jumlah||0), 0);
+  }, 0);
+  document.getElementById('totalJumlah').textContent = total;
 }
 
 function populateFilter(entries) {
   const sel = document.getElementById('filterPeace');
   const cur = sel.value;
-  const places = [...new Set(entries.map(e => e.peace).filter(Boolean))].sort();
-  sel.innerHTML = '<option value="">Semua Mess</option>' + places.map(p => `<option value="${p}">${p}</option>`).join('');
+  const places = new Set();
+  entries.forEach(e => {
+    (e.sessions||[]).forEach(s => { if(s.peace) places.add(s.peace); });
+  });
+  sel.innerHTML = '<option value="">Semua Mess</option>' + [...places].sort().map(p => `<option value="${p}">${p}</option>`).join('');
   if (cur) sel.value = cur;
 }
 
@@ -131,11 +138,13 @@ function applyFilter() {
   let data = selectedDate ? allEntries.filter(e => e.date === selectedDate) : allEntries;
   if (q) data = data.filter(e =>
     (e.namaTamu||'').toLowerCase().includes(q) ||
-    (e.peace||'').toLowerCase().includes(q) ||
-    (e.keterangan||'').toLowerCase().includes(q) ||
-    (e.requestor||'').toLowerCase().includes(q)
+    (e.requestor||'').toLowerCase().includes(q) ||
+    (e.sessions||[]).some(s =>
+      (s.peace||'').toLowerCase().includes(q) ||
+      (s.keterangan||'').toLowerCase().includes(q)
+    )
   );
-  if (peace) data = data.filter(e => e.peace === peace);
+  if (peace) data = data.filter(e => (e.sessions||[]).some(s => s.peace === peace));
   renderTable(data);
 }
 
@@ -150,6 +159,18 @@ function formatDate(iso) {
   return `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()].slice(0,3)} ${d.getFullYear()}`;
 }
 
+function getSessions(entry) {
+  if (entry.sessions && entry.sessions.length) return entry.sessions;
+  // backward compat: convert old flat fields
+  return [{
+    waktu: entry.waktu || (entry.waktuList && entry.waktuList[0]) || '',
+    jumlah: entry.jumlah || 0,
+    ekstra: entry.ekstra || [],
+    peace: entry.peace || '',
+    keterangan: entry.keterangan || '',
+  }];
+}
+
 function renderTable(entries) {
   const wrap = document.getElementById('tableWrap');
   const badge = document.getElementById('badgeDate');
@@ -160,44 +181,38 @@ function renderTable(entries) {
     return;
   }
 
+  let rows = '';
+  entries.forEach((e, i) => {
+    const sessions = getSessions(e);
+    sessions.forEach((sess, sIdx) => {
+      const isFirst = sIdx === 0;
+      const ekstraHtml = (sess.ekstra||[]).map(x =>
+        `<span class="ekstra-chip">${esc(typeof x === 'string' ? x : x.nama)}</span>`
+      ).join('') || '<span style="color:#ccc">-</span>';
+      const waktuHtml = sess.waktu ? `<span class="waktu-badge">⏰ ${esc(sess.waktu)}</span>` : '<span style="color:#ccc">-</span>';
+      rows += `<tr class="${isFirst ? 'entry-first' : 'entry-cont'}">
+        <td style="text-align:center;font-weight:800;color:var(--primary);">${isFirst ? (e.no||i+1) : ''}</td>
+        <td>${isFirst ? `<strong>${esc(e.namaTamu)}</strong>${e.requestor ? `<br><small style="color:var(--muted);font-size:11px;">📋 ${esc(e.requestor)}</small>` : ''}` : ''}</td>
+        <td>${waktuHtml}</td>
+        <td style="text-align:center;font-weight:800;font-size:15px;color:var(--primary);">${sess.jumlah||0}</td>
+        <td>${ekstraHtml}</td>
+        <td>${esc(sess.peace)}</td>
+        <td style="font-size:12px;color:var(--muted);">${esc(sess.keterangan)}</td>
+        <td class="actions-cell">${isFirst ? `
+          <button onclick="openEdit('${e.id}')" title="Edit">✏️</button>
+          <button onclick="deleteEntry('${e.id}')" title="Hapus">🗑️</button>
+        ` : ''}</td>
+      </tr>`;
+    });
+  });
+
   wrap.innerHTML = `<table class="record-table">
     <thead><tr>
-      <th>No</th>
-      <th>Tamu</th>
-      <th>Mess / Lokasi</th>
-      <th>Waktu</th>
-      <th>Ekstra</th>
-      <th>Jumlah</th>
-      <th>Keterangan</th>
-      <th>Aksi</th>
+      <th>No</th><th>Tamu</th><th>Waktu</th>
+      <th>Jumlah</th><th>Ekstra</th>
+      <th>Mess / Lokasi</th><th>Keterangan</th><th>Aksi</th>
     </tr></thead>
-    <tbody>
-      ${entries.map((e,i) => {
-        const waktuList = Array.isArray(e.waktuList) ? e.waktuList : (e.waktu ? [e.waktu] : []);
-        const waktuHtml = waktuList.length
-          ? waktuList.map(w => `<span class="waktu-badge">⏰ ${esc(w)}</span>`).join('')
-          : '<span style="color:#ccc">-</span>';
-        const ekstra = (e.ekstra||[]).map(x =>
-          `<span class="ekstra-chip">${esc(typeof x === 'string' ? x : x.nama)}</span>`
-        ).join('');
-        return `<tr>
-          <td style="text-align:center;font-weight:800;color:var(--primary);">${e.no||i+1}</td>
-          <td>
-            <strong>${esc(e.namaTamu)}</strong>
-            ${e.requestor ? `<br><small style="color:var(--muted);font-size:11px;">📋 ${esc(e.requestor)}</small>` : ''}
-          </td>
-          <td>${esc(e.peace)}</td>
-          <td>${waktuHtml}</td>
-          <td>${ekstra || '<span style="color:#ccc;font-size:12px;">-</span>'}</td>
-          <td style="text-align:center;font-weight:800;font-size:15px;color:var(--primary);">${e.jumlah||0}</td>
-          <td style="font-size:12px;color:var(--muted);">${esc(e.keterangan)}</td>
-          <td class="actions-cell">
-            <button onclick="openEdit('${e.id}')" title="Edit">✏️</button>
-            <button onclick="deleteEntry('${e.id}')" title="Hapus">🗑️</button>
-          </td>
-        </tr>`;
-      }).join('')}
-    </tbody>
+    <tbody>${rows}</tbody>
   </table>`;
 }
 
@@ -224,22 +239,30 @@ window.exportData = function(range, format = 'csv') {
     const end = new Date(start); end.setDate(start.getDate() + 6);
     data = allEntries.filter(e => e.date >= localISO(start) && e.date <= localISO(end));
     rangeLabel = `${localISO(start)} s/d ${localISO(end)}`;
-  } else if (range === 'month') {
+  } else {
     data = allEntries;
     rangeLabel = `${MONTHS[currentMonth-1]} ${currentYear}`;
   }
 
   if (format === 'jpg') { exportJPG(data, rangeLabel); return; }
 
-  const header = ['No','Nama Tamu','Requester','Mess/Lokasi','Waktu','Ekstra','Jumlah','Keterangan'];
-  const rows = data.map((e,i) => {
-    const waktuList = Array.isArray(e.waktuList) ? e.waktuList : (e.waktu ? [e.waktu] : []);
-    return [
-      e.no||i+1, e.namaTamu, e.requestor, e.peace,
-      waktuList.join('; '),
-      (e.ekstra||[]).map(x => typeof x === 'string' ? x : x.nama).join('; '),
-      e.jumlah||0, e.keterangan||''
-    ];
+  // CSV: expand sessions
+  const header = ['No','Nama Tamu','Requester','Waktu','Jumlah','Ekstra','Mess/Lokasi','Keterangan'];
+  const rows = [];
+  data.forEach((e, i) => {
+    const sessions = getSessions(e);
+    sessions.forEach((sess, sIdx) => {
+      rows.push([
+        sIdx === 0 ? (e.no||i+1) : '',
+        sIdx === 0 ? e.namaTamu : '',
+        sIdx === 0 ? e.requestor : '',
+        sess.waktu||'',
+        sess.jumlah||0,
+        (sess.ekstra||[]).map(x => typeof x === 'string' ? x : x.nama).join('; '),
+        sess.peace||'',
+        sess.keterangan||''
+      ]);
+    });
   });
   const csv = [header,...rows].map(r => r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob([csv],{type:'text/csv'});
@@ -251,52 +274,58 @@ window.exportData = function(range, format = 'csv') {
 
 async function exportJPG(data, rangeLabel) {
   if (!data.length) { showToast('Tidak ada data untuk diekspor'); return; }
+
+  let tableRows = '';
+  let totalJml = 0;
+  data.forEach((e, i) => {
+    const sessions = getSessions(e);
+    sessions.forEach((sess, sIdx) => {
+      const isFirst = sIdx === 0;
+      const eks = (sess.ekstra||[]).map(x => typeof x === 'string' ? x : x.nama).join(', ') || '-';
+      totalJml += sess.jumlah || 0;
+      tableRows += `<tr style="background:${(i % 2 === 0) ? '#f5f7fd' : 'white'}">
+        <td style="padding:7px 9px;border:1px solid #c5d5f5;text-align:center;font-weight:800;color:#1e2d5a;">${isFirst ? (e.no||i+1) : ''}</td>
+        <td style="padding:7px 9px;border:1px solid #c5d5f5;font-weight:${isFirst?'700':'400'}">${isFirst ? (e.namaTamu||'') : ''}<br>${isFirst && e.requestor ? `<small style="color:#6b7396;font-size:10px;">${e.requestor}</small>` : ''}</td>
+        <td style="padding:7px 9px;border:1px solid #c5d5f5;font-weight:700;color:#1e2d5a;">${sess.waktu||'-'}</td>
+        <td style="padding:7px 9px;border:1px solid #c5d5f5;text-align:center;font-weight:800;color:#1e2d5a;">${sess.jumlah||0}</td>
+        <td style="padding:7px 9px;border:1px solid #c5d5f5;font-size:11px;">${eks}</td>
+        <td style="padding:7px 9px;border:1px solid #c5d5f5;">${sess.peace||''}</td>
+        <td style="padding:7px 9px;border:1px solid #c5d5f5;font-size:11px;color:#6b7396;">${sess.keterangan||''}</td>
+      </tr>`;
+    });
+  });
+
   const wrap = document.createElement('div');
-  wrap.style.cssText = 'position:fixed;top:-9999px;left:-9999px;background:white;padding:28px;width:960px;font-family:Arial,sans-serif;';
+  wrap.style.cssText = 'position:fixed;top:-9999px;left:-9999px;background:white;padding:28px;width:980px;font-family:Arial,sans-serif;';
   wrap.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;border-bottom:3px solid #1e2d5a;padding-bottom:14px;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;border-bottom:3px solid #1e2d5a;padding-bottom:14px;">
       <div>
         <div style="font-size:20px;font-weight:900;color:#1e2d5a;letter-spacing:1px;">DAILY RECORD FOOD & DRINK</div>
-        <div style="font-size:13px;font-weight:700;margin-top:4px;color:#6b7396;">${rangeLabel}</div>
+        <div style="font-size:13px;font-weight:700;margin-top:5px;color:#6b7396;">${rangeLabel}</div>
       </div>
       <div style="text-align:right;">
         <img src="/logo.png" style="height:40px;object-fit:contain;" onerror="this.style.display='none'"/>
-        <div style="font-size:11px;color:#c9a84c;font-weight:700;margin-top:3px;">hendrosapp.com</div>
+        <div style="font-size:11px;color:#c9a84c;font-weight:700;margin-top:4px;">hendrosapp.com</div>
       </div>
     </div>
-    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+    <table style="width:100%;border-collapse:collapse;font-size:12px;border:2px solid #1e2d5a;">
       <thead>
         <tr style="background:#1e2d5a;color:white;">
-          <th style="padding:9px 8px;border:1px solid #2d4080;">No</th>
-          <th style="padding:9px 8px;border:1px solid #2d4080;">Nama Tamu</th>
-          <th style="padding:9px 8px;border:1px solid #2d4080;">Requester</th>
-          <th style="padding:9px 8px;border:1px solid #2d4080;">Mess/Lokasi</th>
-          <th style="padding:9px 8px;border:1px solid #2d4080;">Waktu</th>
-          <th style="padding:9px 8px;border:1px solid #2d4080;">Ekstra</th>
-          <th style="padding:9px 8px;border:1px solid #2d4080;text-align:center;">Jumlah</th>
-          <th style="padding:9px 8px;border:1px solid #2d4080;">Keterangan</th>
+          <th style="padding:9px 9px;border:1px solid #2d4080;text-align:left;">No</th>
+          <th style="padding:9px 9px;border:1px solid #2d4080;text-align:left;">Tamu</th>
+          <th style="padding:9px 9px;border:1px solid #2d4080;text-align:left;">Waktu</th>
+          <th style="padding:9px 9px;border:1px solid #2d4080;text-align:center;">Jumlah</th>
+          <th style="padding:9px 9px;border:1px solid #2d4080;text-align:left;">Ekstra</th>
+          <th style="padding:9px 9px;border:1px solid #2d4080;text-align:left;">Mess/Lokasi</th>
+          <th style="padding:9px 9px;border:1px solid #2d4080;text-align:left;">Keterangan</th>
         </tr>
       </thead>
-      <tbody>
-        ${data.map((e,i) => {
-          const waktuList = Array.isArray(e.waktuList) ? e.waktuList : (e.waktu ? [e.waktu] : []);
-          return `<tr style="background:${i%2===0?'#f5f7fd':'white'}">
-            <td style="padding:7px 8px;border:1px solid #dde3f0;text-align:center;font-weight:800;color:#1e2d5a;">${e.no||i+1}</td>
-            <td style="padding:7px 8px;border:1px solid #dde3f0;font-weight:700;">${e.namaTamu||''}</td>
-            <td style="padding:7px 8px;border:1px solid #dde3f0;">${e.requestor||''}</td>
-            <td style="padding:7px 8px;border:1px solid #dde3f0;">${e.peace||''}</td>
-            <td style="padding:7px 8px;border:1px solid #dde3f0;">${waktuList.join(', ')||'-'}</td>
-            <td style="padding:7px 8px;border:1px solid #dde3f0;font-size:11px;">${(e.ekstra||[]).map(x=>typeof x==='string'?x:x.nama).join(', ')||'-'}</td>
-            <td style="padding:7px 8px;border:1px solid #dde3f0;text-align:center;font-weight:800;color:#1e2d5a;">${e.jumlah||0}</td>
-            <td style="padding:7px 8px;border:1px solid #dde3f0;font-size:11px;">${e.keterangan||''}</td>
-          </tr>`;
-        }).join('')}
-      </tbody>
+      <tbody>${tableRows}</tbody>
       <tfoot>
         <tr style="background:#e8f0fe;font-weight:800;">
-          <td colspan="6" style="padding:9px 8px;border:1px solid #dde3f0;color:#1e2d5a;">TOTAL</td>
-          <td style="padding:9px 8px;border:1px solid #dde3f0;text-align:center;color:#1e2d5a;">${data.reduce((s,e)=>s+(e.jumlah||0),0)}</td>
-          <td style="padding:9px 8px;border:1px solid #dde3f0;"></td>
+          <td colspan="3" style="padding:9px;border:1px solid #c5d5f5;color:#1e2d5a;">TOTAL</td>
+          <td style="padding:9px;border:1px solid #c5d5f5;text-align:center;color:#1e2d5a;font-weight:900;">${totalJml}</td>
+          <td colspan="3" style="padding:9px;border:1px solid #c5d5f5;"></td>
         </tr>
       </tfoot>
     </table>
@@ -321,35 +350,76 @@ async function exportJPG(data, rangeLabel) {
   }
 }
 
-// MODAL
+// MODAL — SESSION BLOCKS
 const modalOverlay = document.getElementById('modalOverlay');
-const waktuList = document.getElementById('waktuList');
-const ekstraList = document.getElementById('ekstraList');
+const sessionsList = document.getElementById('sessionsList');
 let editingId = null;
 
-function emptyWaktuRow(val = '') {
-  const row = document.createElement('div');
-  row.className = 'waktu-row';
-  row.innerHTML = `
-    <input type="time" class="wk-val" value="${esc(val)}"/>
-    <button type="button">✕</button>`;
-  row.querySelector('button').onclick = () => row.remove();
-  return row;
-}
-
-function emptyEkstraRow(val = '') {
+function makeEkstraRow(nama = '') {
   const row = document.createElement('div');
   row.className = 'ekstra-row';
-  const nama = typeof val === 'string' ? val : (val.nama || '');
-  row.innerHTML = `
-    <input type="text" class="ek-nama" placeholder="Nama ekstra makanan" value="${esc(nama)}"/>
-    <button type="button">✕</button>`;
+  row.innerHTML = `<input type="text" class="ek-nama" placeholder="Nama ekstra" value="${esc(nama)}"/><button type="button">✕</button>`;
   row.querySelector('button').onclick = () => row.remove();
   return row;
 }
 
-document.getElementById('addWaktuBtn').addEventListener('click', () => waktuList.appendChild(emptyWaktuRow()));
-document.getElementById('addEkstraBtn').addEventListener('click', () => ekstraList.appendChild(emptyEkstraRow()));
+function makeSessionBlock(sess = {}) {
+  const block = document.createElement('div');
+  block.className = 'session-block';
+  block.innerHTML = `
+    <div class="session-top">
+      <div>
+        <label>Waktu</label>
+        <input type="time" class="sess-waktu" value="${esc(sess.waktu||'')}"/>
+      </div>
+      <div>
+        <label>Jumlah</label>
+        <input type="number" class="sess-jumlah" min="0" value="${sess.jumlah||0}"/>
+      </div>
+    </div>
+    <div class="session-bottom">
+      <div>
+        <label>Mess / Lokasi</label>
+        <input type="text" class="sess-peace" placeholder="Mess atau lokasi" value="${esc(sess.peace||'')}"/>
+      </div>
+      <div>
+        <label>Keterangan</label>
+        <input type="text" class="sess-keterangan" placeholder="Catatan..." value="${esc(sess.keterangan||'')}"/>
+      </div>
+    </div>
+    <div class="session-ekstra-wrap">
+      <label>Ekstra</label>
+      <div class="sess-ekstra-list"></div>
+    </div>
+    <div class="session-footer">
+      <button type="button" class="add-ekstra-btn-sm">+ Ekstra</button>
+      <button type="button" class="remove-session-btn">✕ Hapus Waktu Ini</button>
+    </div>
+  `;
+
+  // Populate existing ekstra
+  const ekList = block.querySelector('.sess-ekstra-list');
+  (sess.ekstra||[]).forEach(x => {
+    const nama = typeof x === 'string' ? x : x.nama;
+    ekList.appendChild(makeEkstraRow(nama));
+  });
+
+  block.querySelector('.add-ekstra-btn-sm').onclick = () => ekList.appendChild(makeEkstraRow());
+  block.querySelector('.remove-session-btn').onclick = () => {
+    if (sessionsList.querySelectorAll('.session-block').length > 1) {
+      block.remove();
+    } else {
+      showToast('Minimal satu waktu makan harus ada');
+    }
+  };
+
+  return block;
+}
+
+document.getElementById('addSessionBtn').addEventListener('click', () => {
+  sessionsList.appendChild(makeSessionBlock());
+});
+
 document.getElementById('cancelBtn').addEventListener('click', closeModal);
 
 window.openModal = function(entry = null) {
@@ -359,20 +429,10 @@ window.openModal = function(entry = null) {
   document.getElementById('f_date_end').value = '';
   document.getElementById('f_namaTamu').value = entry?.namaTamu || '';
   document.getElementById('f_requestor').value = entry?.requestor || '';
-  document.getElementById('f_peace').value = entry?.peace || '';
-  document.getElementById('f_jumlah').value = entry?.jumlah || 0;
-  document.getElementById('f_keterangan').value = entry?.keterangan || '';
 
-  waktuList.innerHTML = '';
-  const waktuArr = Array.isArray(entry?.waktuList) ? entry.waktuList
-    : (entry?.waktu ? [entry.waktu] : []);
-  if (waktuArr.length) {
-    waktuArr.forEach(w => waktuList.appendChild(emptyWaktuRow(w)));
-  }
-
-  ekstraList.innerHTML = '';
-  const eks = entry?.ekstra?.length ? entry.ekstra : [];
-  eks.forEach(x => ekstraList.appendChild(emptyEkstraRow(x)));
+  sessionsList.innerHTML = '';
+  const sessions = entry ? getSessions(entry) : [{}];
+  sessions.forEach(s => sessionsList.appendChild(makeSessionBlock(s)));
 
   modalOverlay.style.display = 'flex';
 };
@@ -383,29 +443,29 @@ function closeModal() {
   document.getElementById('entryForm').reset();
 }
 
+function readSessions() {
+  return [...sessionsList.querySelectorAll('.session-block')].map(block => {
+    const ekstra = [...block.querySelectorAll('.ek-nama')].map(inp => ({ nama: inp.value })).filter(x => x.nama.trim());
+    return {
+      waktu: block.querySelector('.sess-waktu').value,
+      jumlah: +block.querySelector('.sess-jumlah').value || 0,
+      peace: block.querySelector('.sess-peace').value,
+      keterangan: block.querySelector('.sess-keterangan').value,
+      ekstra,
+    };
+  });
+}
+
 document.getElementById('entryForm').addEventListener('submit', async e => {
   e.preventDefault();
-
-  const waktuArr = [...waktuList.querySelectorAll('.waktu-row')].map(row =>
-    row.querySelector('.wk-val').value
-  ).filter(v => v.trim());
-
-  const ekstra = [...ekstraList.querySelectorAll('.ekstra-row')].map(row => ({
-    nama: row.querySelector('.ek-nama').value,
-  })).filter(x => x.nama.trim());
-
+  const sessions = readSessions();
   const dateStart = document.getElementById('f_date').value;
   const dateEndVal = document.getElementById('f_date_end').value;
-
   const base = {
     namaTamu: document.getElementById('f_namaTamu').value,
     requestor: document.getElementById('f_requestor').value,
-    peace: document.getElementById('f_peace').value,
-    jumlah: +document.getElementById('f_jumlah').value || 0,
-    keterangan: document.getElementById('f_keterangan').value,
+    sessions,
     petugas: username || '',
-    waktuList: waktuArr,
-    ekstra,
   };
 
   const dates = [];
@@ -413,10 +473,7 @@ document.getElementById('entryForm').addEventListener('submit', async e => {
   const endD = dateEndVal ? new Date(dateEndVal + 'T00:00:00') : new Date(dateStart + 'T00:00:00');
   if (endD < startD) { alert('Tanggal keluar tidak boleh sebelum tanggal masuk'); return; }
   const cur = new Date(startD);
-  while (cur <= endD) {
-    dates.push(localISO(cur));
-    cur.setDate(cur.getDate() + 1);
-  }
+  while (cur <= endD) { dates.push(localISO(cur)); cur.setDate(cur.getDate() + 1); }
 
   try {
     if (editingId) {
