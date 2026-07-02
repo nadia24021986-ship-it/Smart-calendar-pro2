@@ -152,14 +152,8 @@ function formatDate(iso) {
 
 function renderTable(entries) {
   const wrap = document.getElementById('tableWrap');
-
-  // Badge: tampilkan tanggal dipilih atau bulan
   const badge = document.getElementById('badgeDate');
-  if (selectedDate) {
-    badge.textContent = `📅 ${formatDate(selectedDate)}`;
-  } else {
-    badge.textContent = `📅 ${MONTHS[currentMonth-1]} ${currentYear}`;
-  }
+  badge.textContent = selectedDate ? `📅 ${formatDate(selectedDate)}` : `📅 ${MONTHS[currentMonth-1]} ${currentYear}`;
 
   if (!entries.length) {
     wrap.innerHTML = `<div class="empty-state">${selectedDate ? 'Tidak ada data untuk tanggal ini.' : 'Belum ada data bulan ini.'}</div>`;
@@ -179,10 +173,13 @@ function renderTable(entries) {
     </tr></thead>
     <tbody>
       ${entries.map((e,i) => {
+        const waktuList = Array.isArray(e.waktuList) ? e.waktuList : (e.waktu ? [e.waktu] : []);
+        const waktuHtml = waktuList.length
+          ? waktuList.map(w => `<span class="waktu-badge">⏰ ${esc(w)}</span>`).join('')
+          : '<span style="color:#ccc">-</span>';
         const ekstra = (e.ekstra||[]).map(x =>
           `<span class="ekstra-chip">${esc(typeof x === 'string' ? x : x.nama)}</span>`
         ).join('');
-        const waktuDisplay = e.waktu ? `<span class="waktu-badge">⏰ ${esc(e.waktu)}</span>` : '<span style="color:#ccc">-</span>';
         return `<tr>
           <td style="text-align:center;font-weight:800;color:var(--primary);">${e.no||i+1}</td>
           <td>
@@ -190,7 +187,7 @@ function renderTable(entries) {
             ${e.requestor ? `<br><small style="color:var(--muted);font-size:11px;">📋 ${esc(e.requestor)}</small>` : ''}
           </td>
           <td>${esc(e.peace)}</td>
-          <td>${waktuDisplay}</td>
+          <td>${waktuHtml}</td>
           <td>${ekstra || '<span style="color:#ccc;font-size:12px;">-</span>'}</td>
           <td style="text-align:center;font-weight:800;font-size:15px;color:var(--primary);">${e.jumlah||0}</td>
           <td style="font-size:12px;color:var(--muted);">${esc(e.keterangan)}</td>
@@ -235,12 +232,15 @@ window.exportData = function(range, format = 'csv') {
   if (format === 'jpg') { exportJPG(data, rangeLabel); return; }
 
   const header = ['No','Nama Tamu','Requester','Mess/Lokasi','Waktu','Ekstra','Jumlah','Keterangan'];
-  const rows = data.map((e,i) => [
-    e.no||i+1, e.namaTamu, e.requestor, e.peace,
-    e.waktu||'',
-    (e.ekstra||[]).map(x => typeof x === 'string' ? x : x.nama).join('; '),
-    e.jumlah||0, e.keterangan||''
-  ]);
+  const rows = data.map((e,i) => {
+    const waktuList = Array.isArray(e.waktuList) ? e.waktuList : (e.waktu ? [e.waktu] : []);
+    return [
+      e.no||i+1, e.namaTamu, e.requestor, e.peace,
+      waktuList.join('; '),
+      (e.ekstra||[]).map(x => typeof x === 'string' ? x : x.nama).join('; '),
+      e.jumlah||0, e.keterangan||''
+    ];
+  });
   const csv = [header,...rows].map(r => r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob([csv],{type:'text/csv'});
   const url = URL.createObjectURL(blob);
@@ -254,35 +254,43 @@ async function exportJPG(data, rangeLabel) {
   const wrap = document.createElement('div');
   wrap.style.cssText = 'position:fixed;top:-9999px;left:-9999px;background:white;padding:28px;width:960px;font-family:Arial,sans-serif;';
   wrap.innerHTML = `
-    <div style="text-align:center;margin-bottom:18px;border-bottom:3px solid #1e2d5a;padding-bottom:14px;">
-      <div style="font-size:20px;font-weight:900;color:#1e2d5a;letter-spacing:1px;">DAILY RECORD FOOD & DRINK</div>
-      <div style="font-size:13px;font-weight:700;margin-top:5px;color:#6b7396;">${rangeLabel}</div>
-      <div style="font-size:11px;color:#c9a84c;font-weight:700;margin-top:3px;">Smart Calendar Pro 2.0 | hendrosapp.com</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;border-bottom:3px solid #1e2d5a;padding-bottom:14px;">
+      <div>
+        <div style="font-size:20px;font-weight:900;color:#1e2d5a;letter-spacing:1px;">DAILY RECORD FOOD & DRINK</div>
+        <div style="font-size:13px;font-weight:700;margin-top:4px;color:#6b7396;">${rangeLabel}</div>
+      </div>
+      <div style="text-align:right;">
+        <img src="/logo.png" style="height:40px;object-fit:contain;" onerror="this.style.display='none'"/>
+        <div style="font-size:11px;color:#c9a84c;font-weight:700;margin-top:3px;">hendrosapp.com</div>
+      </div>
     </div>
     <table style="width:100%;border-collapse:collapse;font-size:12px;">
       <thead>
         <tr style="background:#1e2d5a;color:white;">
-          <th style="padding:9px 8px;border:1px solid #2d4080;text-align:left;">No</th>
-          <th style="padding:9px 8px;border:1px solid #2d4080;text-align:left;">Nama Tamu</th>
-          <th style="padding:9px 8px;border:1px solid #2d4080;text-align:left;">Requester</th>
-          <th style="padding:9px 8px;border:1px solid #2d4080;text-align:left;">Mess/Lokasi</th>
-          <th style="padding:9px 8px;border:1px solid #2d4080;text-align:center;">Waktu</th>
-          <th style="padding:9px 8px;border:1px solid #2d4080;text-align:left;">Ekstra</th>
+          <th style="padding:9px 8px;border:1px solid #2d4080;">No</th>
+          <th style="padding:9px 8px;border:1px solid #2d4080;">Nama Tamu</th>
+          <th style="padding:9px 8px;border:1px solid #2d4080;">Requester</th>
+          <th style="padding:9px 8px;border:1px solid #2d4080;">Mess/Lokasi</th>
+          <th style="padding:9px 8px;border:1px solid #2d4080;">Waktu</th>
+          <th style="padding:9px 8px;border:1px solid #2d4080;">Ekstra</th>
           <th style="padding:9px 8px;border:1px solid #2d4080;text-align:center;">Jumlah</th>
-          <th style="padding:9px 8px;border:1px solid #2d4080;text-align:left;">Keterangan</th>
+          <th style="padding:9px 8px;border:1px solid #2d4080;">Keterangan</th>
         </tr>
       </thead>
       <tbody>
-        ${data.map((e,i) => `<tr style="background:${i%2===0?'#f5f7fd':'white'}">
-          <td style="padding:7px 8px;border:1px solid #dde3f0;text-align:center;font-weight:800;color:#1e2d5a;">${e.no||i+1}</td>
-          <td style="padding:7px 8px;border:1px solid #dde3f0;font-weight:700;">${e.namaTamu||''}</td>
-          <td style="padding:7px 8px;border:1px solid #dde3f0;">${e.requestor||''}</td>
-          <td style="padding:7px 8px;border:1px solid #dde3f0;">${e.peace||''}</td>
-          <td style="padding:7px 8px;border:1px solid #dde3f0;text-align:center;font-weight:700;">${e.waktu||'-'}</td>
-          <td style="padding:7px 8px;border:1px solid #dde3f0;font-size:11px;">${(e.ekstra||[]).map(x=>typeof x==='string'?x:x.nama).join(', ')||'-'}</td>
-          <td style="padding:7px 8px;border:1px solid #dde3f0;text-align:center;font-weight:800;color:#1e2d5a;">${e.jumlah||0}</td>
-          <td style="padding:7px 8px;border:1px solid #dde3f0;font-size:11px;">${e.keterangan||''}</td>
-        </tr>`).join('')}
+        ${data.map((e,i) => {
+          const waktuList = Array.isArray(e.waktuList) ? e.waktuList : (e.waktu ? [e.waktu] : []);
+          return `<tr style="background:${i%2===0?'#f5f7fd':'white'}">
+            <td style="padding:7px 8px;border:1px solid #dde3f0;text-align:center;font-weight:800;color:#1e2d5a;">${e.no||i+1}</td>
+            <td style="padding:7px 8px;border:1px solid #dde3f0;font-weight:700;">${e.namaTamu||''}</td>
+            <td style="padding:7px 8px;border:1px solid #dde3f0;">${e.requestor||''}</td>
+            <td style="padding:7px 8px;border:1px solid #dde3f0;">${e.peace||''}</td>
+            <td style="padding:7px 8px;border:1px solid #dde3f0;">${waktuList.join(', ')||'-'}</td>
+            <td style="padding:7px 8px;border:1px solid #dde3f0;font-size:11px;">${(e.ekstra||[]).map(x=>typeof x==='string'?x:x.nama).join(', ')||'-'}</td>
+            <td style="padding:7px 8px;border:1px solid #dde3f0;text-align:center;font-weight:800;color:#1e2d5a;">${e.jumlah||0}</td>
+            <td style="padding:7px 8px;border:1px solid #dde3f0;font-size:11px;">${e.keterangan||''}</td>
+          </tr>`;
+        }).join('')}
       </tbody>
       <tfoot>
         <tr style="background:#e8f0fe;font-weight:800;">
@@ -293,7 +301,7 @@ async function exportJPG(data, rangeLabel) {
       </tfoot>
     </table>
     <div style="display:flex;justify-content:space-between;font-size:10px;color:#aaa;margin-top:10px;">
-      <span>hendrosapp.com</span>
+      <span>hendrosapp.com | Smart Calendar Pro 2.0</span>
       <span>Dicetak: ${new Date().toLocaleString('id-ID')}</span>
     </div>
   `;
@@ -315,8 +323,19 @@ async function exportJPG(data, rangeLabel) {
 
 // MODAL
 const modalOverlay = document.getElementById('modalOverlay');
+const waktuList = document.getElementById('waktuList');
 const ekstraList = document.getElementById('ekstraList');
 let editingId = null;
+
+function emptyWaktuRow(val = '') {
+  const row = document.createElement('div');
+  row.className = 'waktu-row';
+  row.innerHTML = `
+    <input type="time" class="wk-val" value="${esc(val)}"/>
+    <button type="button">✕</button>`;
+  row.querySelector('button').onclick = () => row.remove();
+  return row;
+}
 
 function emptyEkstraRow(val = '') {
   const row = document.createElement('div');
@@ -329,6 +348,7 @@ function emptyEkstraRow(val = '') {
   return row;
 }
 
+document.getElementById('addWaktuBtn').addEventListener('click', () => waktuList.appendChild(emptyWaktuRow()));
 document.getElementById('addEkstraBtn').addEventListener('click', () => ekstraList.appendChild(emptyEkstraRow()));
 document.getElementById('cancelBtn').addEventListener('click', closeModal);
 
@@ -340,12 +360,20 @@ window.openModal = function(entry = null) {
   document.getElementById('f_namaTamu').value = entry?.namaTamu || '';
   document.getElementById('f_requestor').value = entry?.requestor || '';
   document.getElementById('f_peace').value = entry?.peace || '';
-  document.getElementById('f_waktu').value = entry?.waktu || '';
   document.getElementById('f_jumlah').value = entry?.jumlah || 0;
   document.getElementById('f_keterangan').value = entry?.keterangan || '';
+
+  waktuList.innerHTML = '';
+  const waktuArr = Array.isArray(entry?.waktuList) ? entry.waktuList
+    : (entry?.waktu ? [entry.waktu] : []);
+  if (waktuArr.length) {
+    waktuArr.forEach(w => waktuList.appendChild(emptyWaktuRow(w)));
+  }
+
   ekstraList.innerHTML = '';
   const eks = entry?.ekstra?.length ? entry.ekstra : [];
   eks.forEach(x => ekstraList.appendChild(emptyEkstraRow(x)));
+
   modalOverlay.style.display = 'flex';
 };
 
@@ -358,6 +386,10 @@ function closeModal() {
 document.getElementById('entryForm').addEventListener('submit', async e => {
   e.preventDefault();
 
+  const waktuArr = [...waktuList.querySelectorAll('.waktu-row')].map(row =>
+    row.querySelector('.wk-val').value
+  ).filter(v => v.trim());
+
   const ekstra = [...ekstraList.querySelectorAll('.ekstra-row')].map(row => ({
     nama: row.querySelector('.ek-nama').value,
   })).filter(x => x.nama.trim());
@@ -369,10 +401,10 @@ document.getElementById('entryForm').addEventListener('submit', async e => {
     namaTamu: document.getElementById('f_namaTamu').value,
     requestor: document.getElementById('f_requestor').value,
     peace: document.getElementById('f_peace').value,
-    waktu: document.getElementById('f_waktu').value,
     jumlah: +document.getElementById('f_jumlah').value || 0,
     keterangan: document.getElementById('f_keterangan').value,
     petugas: username || '',
+    waktuList: waktuArr,
     ekstra,
   };
 
