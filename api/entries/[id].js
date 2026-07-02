@@ -7,6 +7,7 @@ function mapEntry(row) {
     namaTamu: row.nama_tamu,
     requestor: row.requestor || '',
     peace: row.peace || '',
+    waktuList: row.waktu_list || [],
     waktu: row.waktu || '',
     jumlah: row.jumlah || 0,
     keterangan: row.keterangan || '',
@@ -33,7 +34,7 @@ module.exports = async (req, res) => {
       if (body.namaTamu !== undefined) update.nama_tamu = body.namaTamu;
       if (body.requestor !== undefined) update.requestor = body.requestor;
       if (body.peace !== undefined) update.peace = body.peace;
-      if (body.waktu !== undefined) update.waktu = body.waktu;
+      if (body.waktuList !== undefined) update.waktu_list = body.waktuList;
       if (body.jumlah !== undefined) update.jumlah = body.jumlah;
       if (body.keterangan !== undefined) update.keterangan = body.keterangan;
       if (body.ekstra !== undefined) update.makanan_tambahan = body.ekstra;
