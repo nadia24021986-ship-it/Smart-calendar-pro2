@@ -4,12 +4,18 @@ const { getUserFromRequest } = require('../../lib/auth');
 function mapEntry(row) {
   return {
     id: row.id, date: row.date, no: row.no,
-    namaTamu: row.nama_tamu, requestor: row.requestor, peace: row.peace,
+    namaTamu: row.nama_tamu,
+    requestor: row.requestor || '',
+    peace: row.peace || '',
+    waktu: row.waktu || '',
+    jumlah: row.jumlah || 0,
     keterangan: row.keterangan || '',
-    pagi: row.pagi || 0, siang: row.siang || 0, malam: row.malam || 0,
-    makananTambahan: row.makanan_tambahan || [],
-    items: row.items || [], attachments: row.attachments || [],
-    createdBy: row.created_by, createdAt: row.created_at, updatedAt: row.updated_at,
+    ekstra: row.makanan_tambahan || [],
+    items: row.items || [],
+    attachments: row.attachments || [],
+    createdBy: row.created_by,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 
@@ -27,11 +33,10 @@ module.exports = async (req, res) => {
       if (body.namaTamu !== undefined) update.nama_tamu = body.namaTamu;
       if (body.requestor !== undefined) update.requestor = body.requestor;
       if (body.peace !== undefined) update.peace = body.peace;
+      if (body.waktu !== undefined) update.waktu = body.waktu;
+      if (body.jumlah !== undefined) update.jumlah = body.jumlah;
       if (body.keterangan !== undefined) update.keterangan = body.keterangan;
-      if (body.pagi !== undefined) update.pagi = body.pagi;
-      if (body.siang !== undefined) update.siang = body.siang;
-      if (body.malam !== undefined) update.malam = body.malam;
-      if (body.makananTambahan !== undefined) update.makanan_tambahan = body.makananTambahan;
+      if (body.ekstra !== undefined) update.makanan_tambahan = body.ekstra;
       if (body.items !== undefined) update.items = body.items;
       if (body.attachments !== undefined) update.attachments = body.attachments;
       const { data, error } = await supabase.from('entries').update(update).eq('id', id).select().single();
